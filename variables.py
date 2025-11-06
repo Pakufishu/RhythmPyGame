@@ -2,11 +2,12 @@ import pygame
 
 WIDTH, HEIGHT = 1080 , 720
 fps = 60
-speed = 4
+speed = 20
 judge_line = HEIGHT - 100 #620
-offset = 0
+songoffset = 0
 bpm = 185
 now = 0
+swipe_cd = 0
 
 LANE = {
 1 : ((WIDTH / 3) , 0),

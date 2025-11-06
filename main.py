@@ -32,7 +32,7 @@ add_speed_rect = add_speed.get_rect(topleft=(40,120))
 class Beatline:
     def __init__(self,y = 0):
         self.bpm = 60000 / bpm
-        self.y = y
+        self.y = y - offset
 
     def main(self):
         self.scroll()
@@ -43,19 +43,31 @@ class Beatline:
 
     def draw(self):
         for timing in range(0,401):
-            pygame.draw.line(screen, pygame.Color('Gray'), (LANE[1][0], (self.y - timing * (self.bpm * speed / 4))),
-                             ((LANE[5][0]), (self.y - timing * (self.bpm * speed / 4))), 5)
-
+            if timing % 4 == 0:
+                pygame.draw.line(screen, pygame.Color('Red'),
+                                 (LANE[1][0], (self.y - timing * (self.bpm * speed / 16))),
+                                 ((LANE[5][0]), (self.y - timing * (self.bpm * speed / 16))), 5)
+            else:
+                pygame.draw.line(screen, pygame.Color('Gray'),
+                                 (LANE[1][0], (self.y - timing * (self.bpm * speed / 16))),
+                                 ((LANE[5][0]), (self.y - timing * (self.bpm * speed / 16))), 5)
+            # elif timing % 4 == 2:
+            #     pygame.draw.line(screen, pygame.Color('Blue'),
+            #                      (LANE[1][0], (self.y - timing * (self.bpm * speed / 16))),
+            #                      ((LANE[5][0]), (self.y - timing * (self.bpm * speed / 16))), 5)
+            # elif timing % 4 == 3:
+            #     pygame.draw.line(screen, pygame.Color('Yellow'),
+            #                      (LANE[1][0], (self.y - timing * (self.bpm * speed / 16))),
+            #                      ((LANE[5][0]), (self.y - timing * (self.bpm * speed / 16))), 5)
 
 class Note:
     def __init__(self,lane,y,judge,timing,end):
         self.lane = lane
         self.timing = timing
-        self.bpmline = 60000 / bpm
+        self.bpm = 60000 / bpm
         self.y = y * speed
         self.judge = judge
         self.end = end
-        self.scrollspeed = speed
         self.pressed = False
 
     def main(self):
@@ -64,29 +76,159 @@ class Note:
         if self.y > HEIGHT:
             self.kys()
 
-    def printer(self):
-        print(str(self.lane),str(self.y),str(self.judge),str(self.end))
-
     def judgement(self): #t = d/v
-        timing_perfect = self.timing
-        print(f'Perfect time = {timing_perfect} Lane: {self.lane}')
-        print(f'Now = {now}')
-        timing_error = abs( - self.judge)
+        timing_error = abs(self.timing - self.judge)
+        if timing_error < 0.01667:
+            judge = 'Critical Perfect'
+        elif timing_error < 0.04333:
+            judge = 'Perfect'
+        elif timing_error < 0.07777:
+            judge = 'Great'
+        elif timing_error < 0.1:
+            judge = 'Good'
+        elif timing_error < 0.25:
+            judge = 'Miss'
+        else:
+            return False
+        print(f'Perfect time = {self.timing} Lane: {self.lane}')
+        print(f'Now = {self.judge}')
+        judge_text = font.render(judge, False, 'Red')
+        judge_rect = text_surf.get_rect(center=(LANE[2][0], HEIGHT * 2 / 3))
+        screen.blit(judge_text, judge_rect)
+        return True
 
     def hit(self):
         if not self.pressed:
-            self.judge = now
-            self.pressed = True
-            print(self.judgement())
-            self.kys()
+            self.judge = elapsed_time
+            if self.judgement():
+                self.pressed = True
+                self.kys()
         return
 
+    def release(self):
+        pass
+
     def scroll(self):
-        self.y += self.scrollspeed * dt * fps
+        self.y += speed * dt * fps
 
     def draw(self):
         pygame.draw.line(screen,pygame.Color('Red'),(LANE[self.lane][0], self.y),
                          (LANE[self.lane+1][0], self.y), 20)
+
+    def kys(self):
+        notes.remove(self)
+
+class Hold:
+    def __init__(self,lane,y,judge,timing,end):
+        self.lane = lane
+        self.timing = timing
+        self.bpm = 60000 / bpm
+        self.y = y * speed
+        self.judge = judge
+        self.endjudge = 0
+        self.end = end * speed
+        self.pressed = False
+
+    def main(self):
+        self.scroll()
+        self.draw()
+        if self.end > HEIGHT:
+            self.kys()
+
+    def judgement(self):  # t = d/v
+        print(f'Perfect time = {self.timing} Lane: {self.lane}')
+        print(f'Start = {self.judge}')
+        print(f'End = {self.endjudge}')
+        timing_error = abs(self.timing - self.judge)
+
+    def hit(self):
+        if not self.pressed:
+            self.judge = elapsed_time
+            self.pressed = True
+            self.judgement()
+        return
+
+    def release(self):
+        self.endjudge = elapsed_time
+        self.judgement()
+        self.kys()
+
+    def scroll(self):
+        self.y += speed * dt * fps
+        self.end += speed * dt * fps
+
+    def draw(self):
+        if self.pressed:
+            pygame.draw.line(screen, pygame.Color('Red'), (LANE[self.lane][0] + 50, judge_line),
+                             (LANE[self.lane][0] + 50, self.end), 80)
+            pygame.draw.line(screen, pygame.Color('Red'), (LANE[self.lane][0], self.end),
+                             (LANE[self.lane + 1][0], self.end), 20)
+            return
+        pygame.draw.line(screen,pygame.Color('Red'),(LANE[self.lane][0]+50, self.y),
+                         (LANE[self.lane][0]+50, self.end), 80)
+        pygame.draw.line(screen,pygame.Color('Red'),(LANE[self.lane][0], self.y),
+                         (LANE[self.lane+1][0], self.y), 20)
+        pygame.draw.line(screen,pygame.Color('Red'),(LANE[self.lane][0], self.end),
+                        (LANE[self.lane+1][0], self.end), 20)
+
+    def kys(self):
+        notes.remove(self)
+
+class Swipe:
+    def __init__(self,lane,y,judge,timing,side):
+        self.lane = lane
+        self.timing = timing
+        self.bpm = 60000 / bpm
+        self.y = y * speed
+        self.judge = judge
+        self.side = side
+        self.pressed = False
+
+    def main(self):
+        self.scroll()
+        self.draw()
+        if self.y > HEIGHT:
+            self.kys()
+
+    def judgement(self): #t = d/v
+        print(f'Perfect time = {self.timing} Lane: {self.lane}')
+        print(f'Now = {self.judge}')
+        timing_error = abs(self.timing - self.judge)
+        if timing_error < 0.01667:
+            judge = 'Critical Perfect'
+        elif timing_error < 0.04333:
+            judge = 'Perfect'
+        elif timing_error < 0.07777:
+            judge = 'Great'
+        elif timing_error < 0.1:
+            judge = 'Good'
+        elif timing_error < 0.3:
+            judge = 'Miss'
+        else:
+            print('NOT YET')
+            return False
+        judge_text = font.render(judge, False, 'Red')
+        judge_rect = text_surf.get_rect(center=(LANE[2][0], HEIGHT * 2 /3))
+        screen.blit(judge_text, judge_rect)
+        return True
+
+    def hit(self):
+        if not self.pressed:
+            self.judge = elapsed_time
+            if self.judgement():
+                self.pressed = True
+                self.kys()
+        return
+
+    def release(self):
+        pass
+
+    def scroll(self):
+        self.y += speed * dt * fps
+
+    def draw(self):
+        pygame.draw.line(screen,pygame.Color('Pink'),(LANE[1][0], self.y),
+                         (LANE[5][0], self.y), 20)
 
     def kys(self):
         notes.remove(self)
@@ -102,9 +244,6 @@ class Lane:
         self.key_check()
         self.light_up()
 
-    def booldown(self):
-        return self.ispressed
-
     def key_down(self):
         self.keystate = True
 
@@ -116,6 +255,10 @@ class Lane:
         if self.waspressed and self.keystate == False:
             # print(f'Lane {self.num} Up')
             self.waspressed = False
+            for noteup in notes:
+                if noteup.lane == self.num:
+                    noteup.release()
+                    return
 
         if self.keystate and self.ispressed == False:
             # print(f'Lane {self.num} Down')
@@ -131,34 +274,51 @@ class Lane:
             temp_rect = pygame.Rect(LANE[self.num][0], 100, 100, HEIGHT - (HEIGHT - judge_line) - 100)
             function.gradientRect(screen, pygame.Color((200,200,200)), pygame.Color((30, 30, 30)), temp_rect)
 
+combo = 0
+notes = []
+
+# menu.main_menu()
+notes.clear()
+
+offset = 0
 beatline = Beatline()
 LANE1 = Lane(1,False,False,False)
 LANE2 = Lane(2,False,False,False)
 LANE3 = Lane(3,False,False,False)
 LANE4 = Lane(4,False,False,False)
 
-combo = 0
-notes = []
-
-menu.main_menu()
-notes.clear()
+# read chart script add node class according to the type to notes list
 with open('Songs/Mesmerizer/Mesmerizer', 'r') as f:
     for line in f:
         if not line.strip().startswith('#'):
-            x = list(map(int,(line.strip().split(','))))
-            notes.append(Note(*x))
-# read chart script add to notes list
-print('Start')
+            x = list(map(float,(line.strip().split(','))))
+            x[1] += offset
+            x[4] += offset
+            if x[4] == 1 + offset or x[4] == 2 + offset:
+                notes.append(Swipe(*x))
+            elif x[4] != 0 + offset:
+                notes.append(Hold(*x))
+            else:
+                notes.append(Note(*x))
+
+print('Start game')
 pygame.key.set_repeat(0,0)
-previous_time = time.time()
 pygame.mixer.music.play()
 running = True
-
+start_time = time.time()
+previous_time = time.time()
 while running:
-    dt = time.time() - previous_time
+    clock.tick(fps)
+    now = time.time()
+    dt = now - previous_time
     previous_time = time.time()
+
+    if swipe_cd > 0: swipe_cd -= 1
     screen.fill((30, 30, 30))
-    now = pygame.mixer.music.get_pos()
+    elapsed_time = round(now - start_time, 4)
+    if 1.41 >= round(elapsed_time, 3) >= 1.39:
+        print('Start of song')
+        # screen.fill((255, 255, 255))
 
     if pygame.mixer.music.get_pos() == -1:
         pass
@@ -167,7 +327,15 @@ while running:
             pygame.quit()
             exit()
         if event.type == pygame.MOUSEMOTION:
-            mx,     my = pygame.mouse.get_pos()
+            mx, my = pygame.mouse.get_pos()
+            # movementx, movementy = pygame.mouse.get_rel()
+            # if movementx > 40 and swipe_cd == 0:
+            #     print('swipe right')
+            #     swipe_cd = 5
+            # elif movementx < -40 and swipe_cd == 0:
+            #     print('swipe left')
+            #     swipe_cd = 5
+            # pygame.mouse.set_pos((WIDTH/2, HEIGHT/2))
         if event.type == pygame.MOUSEBUTTONDOWN:
             if minus_speed_rect.collidepoint(mx, my):
                 speed -= 1
@@ -184,6 +352,12 @@ while running:
             if event.key == pygame.K_f: LANE2.key_up()
             if event.key == pygame.K_j: LANE3.key_up()
             if event.key == pygame.K_k: LANE4.key_up()
+
+    # mouse_movement =  - mx
+    # if mouse_movement:
+    #     print('swipe left')
+    # elif mouse_movement:
+    #     print('swipe right')
 
     LANE1.main(), LANE2.main(), LANE3.main(), LANE4.main()
     beatline.main()
@@ -209,5 +383,8 @@ while running:
     screen.blit(add_speed,add_speed_rect)
     screen.blit(minus_speed,minus_speed_rect)
 
+    time_text = font.render(f'Time: {elapsed_time}', False, 'Gray')
+    time_rect = time_text.get_rect(topleft=(20, 160))
+    screen.blit(time_text, time_rect)
+
     pygame.display.update()
-    clock.tick(fps)
