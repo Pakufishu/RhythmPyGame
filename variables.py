@@ -2,12 +2,14 @@ import pygame
 
 WIDTH, HEIGHT = 1080 , 720
 fps = 60
-speed = 20
+speed = 8
 judge_line = HEIGHT - 100 #620
 songoffset = 0
 bpm = 185
 now = 0
 swipe_cd = 0
+judgement_fadeout = 10
+firstnote_clicked = False
 
 LANE = {
 1 : ((WIDTH / 3) , 0),
