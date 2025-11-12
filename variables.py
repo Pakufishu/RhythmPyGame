@@ -1,13 +1,14 @@
 import pygame
 
 WIDTH, HEIGHT = 1080 , 720
+JUDGE_LINE = HEIGHT - 100
 fps = 60
 speed = 8
-judge_line = HEIGHT - 100 #620
 songoffset = 0
 bpm = 185
 now = 0
 swipe_cd = 0
+mx, my = 0,0
 judgement_fadeout = 10
 firstnote_clicked = False
 
@@ -25,3 +26,11 @@ KEYS = {
         pygame.K_j : LANE[3],
         pygame.K_k : LANE[4],
 }
+
+judgecolor = {
+                    'Critical Perfect': pygame.Color('Yellow'),
+                     'Perfect': pygame.Color('Orange'),
+                     'Great': pygame.Color('Pink'),
+                     'Good': pygame.Color('Green'),
+                     'Miss': pygame.Color('Red'),
+                     }
