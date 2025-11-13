@@ -1,4 +1,3 @@
-from pydoc import visiblename
 from sys import exit
 
 import pygame.time, time
@@ -7,20 +6,31 @@ from variables import *
 import function
 import menu
 
+pygame.mixer.pre_init(44100, -16, 2, 512)
 pygame.init()
 pygame.mixer.init()
+
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('Rhythm Game')
 clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 50)
-bigfont = pygame.font.SysFont(None, 100)
+combofont = pygame.font.Font('fonts/Platinum Sign Under.ttf', 40)
+combofontup = pygame.font.Font('fonts/Platinum Sign Over.ttf', 40)
 
-playlane_obj = pygame.Surface(((WIDTH / 10) - 10, HEIGHT))
-playlane_obj.fill('White')
+playlane_obj = pygame.Surface((400, HEIGHT), pygame.SRCALPHA, 32)
+playlane_rect = playlane_obj.get_rect(center=(LANE[3][0],HEIGHT/2))
+playlane_obj = playlane_obj.convert_alpha()
+playlane_obj.fill((0,0,0,85))
 
-songname_surf = font.render('Mesmerizer', False, 'White')
+
+songname_surf = combofont.render('MESMERIZER', False, 'Black')
+songname_surf_up = combofontup.render('MESMERIZER', False, 'White')
 songname_rect = songname_surf.get_rect(topleft=(20,20))
+
+lane_sound = pygame.mixer.Sound('sfx/lanesound.wav')
+lane_sound.set_volume(0.1)
+# note_sound = pygame.mixer.Sound('sfx/notesound.wav')
 
 class Conductor:
     def __init__(self, offset):
@@ -84,7 +94,6 @@ class PlayerInput:
     def handle_event(self,event):
         global speed
         if event.type == pygame.MOUSEMOTION:
-            pass
             global mx, my, swipe_cd
             mx, my = pygame.mouse.get_pos()
             movementx, movementy = pygame.mouse.get_rel()
@@ -111,13 +120,17 @@ class PlayerInput:
             if event.key == pygame.K_j: LANE3.key_up()
             if event.key == pygame.K_k: LANE4.key_up()
 
+        for key in pygame.key.get_pressed():
+            if key == pygame.K_ESCAPE:
+                menu.pause()
+
 class Beatline:
     def __init__(self, y=JUDGE_LINE):
-        self.y = y
         self.bar = 0
         self.bpm = 185
         self.ms_per_beat = round(60 / bpm/4, 3) * 1000
         self.pixel_per_beat = speed * self.ms_per_beat
+        self.y = y
         self.lane_start = LANE[1][0]
         self.lane_end = LANE[5][0]
         self.visible_line = []
@@ -158,7 +171,7 @@ class Note:
         self.draw()
         if self.y > HEIGHT + speed * 10:
             self.kys()
-            judges.append('Miss')
+            judges.append('MISS')
 
     def scroll(self):
         self.y += speed
@@ -177,14 +190,14 @@ class Note:
     def judgement(self): #t = d/v
         bar, beat = Conductor.barnumber, Conductor.lastbeat
         hit_window = (bar + 1) * 16 + beat
-        timing_window = (self.bar * 16) + self.beat - 2
+        timing_window = (self.bar * 16) + self.beat
         timing_error = abs(hit_window - timing_window)
         if timing_error < 6:
-            if timing_error == 0: judge = 'Critical Perfect'
-            elif timing_error <= 1: judge = 'Perfect'
-            elif timing_error <= 2: judge = 'Great'
-            elif timing_error <= 3: judge = 'Good'
-            else: judge = 'Miss'
+            if timing_error == 0: judge = 'CRITICAL PERFECT'
+            elif timing_error <= 1: judge = 'PERFECT'
+            elif timing_error <= 2: judge = 'GREAT'
+            elif timing_error <= 3: judge = 'GOOD'
+            else: judge = 'MISS'
             judges.append(judge)
             return True
         return False
@@ -254,7 +267,7 @@ class Hold:
     def judgement(self): #t = d/v
         bar, beat = Conductor.barnumber, Conductor.lastbeat
         hit_window = (bar + 1) * 16 + beat
-        timing_window = (self.bar * 16) + self.beat - 2
+        timing_window = (self.bar * 16) + self.beat
         timing_error = abs(hit_window - timing_window)
         if timing_error < 6:
             if timing_error == 0: judge = 'Critical Perfect'
@@ -334,7 +347,7 @@ class Swipe:
     def judgement(self,direction): #t = d/v
         bar, beat = Conductor.barnumber, Conductor.lastbeat
         hit_window = (bar + 1) * 16 + beat
-        timing_window = (self.bar * 16) + self.beat - 2
+        timing_window = (self.bar * 16) + self.beat
         timing_error = abs(hit_window - timing_window)
         if timing_error < 6:
             if self.direction == direction:
@@ -368,6 +381,8 @@ class Lane:
 
     def key_down(self):
         self.keystate = True
+        lane_sound.play()
+        lane_sound.fadeout(100)
 
     def key_up(self):
         self.keystate = False
@@ -395,7 +410,7 @@ class Lane:
     def light_up(self):
         if self.waspressed:
             temp_rect = pygame.Rect(LANE[self.num][0], 100, 100, HEIGHT - (HEIGHT - JUDGE_LINE) - 100)
-            function.gradientRect(screen, pygame.Color((200,200,200)), pygame.Color((30, 30, 30)), temp_rect)
+            function.gradientRect(screen, (200,200,200), (30, 30, 30, 0), temp_rect)
 
 class Scoring:
     def __init__(self):
@@ -409,13 +424,15 @@ class Interface:
 
     def display_UI(self):
         screen.blit(songname_surf, songname_rect)
+        screen.blit(songname_surf_up, songname_rect)
+        screen.blit(playlane_obj, playlane_rect)
 
         time_text = font.render(f'Time: {pygame.mixer.music.get_pos()/1000}', False, 'Gray')
-        time_rect = time_text.get_rect(topleft=(20, 160))
+        time_rect = time_text.get_rect(topleft=(20, 100))
         screen.blit(time_text, time_rect)
 
         conductor_text = font.render(f'Conductor: {Conductor.barnumber, Conductor.lastbeat}', False, 'White')
-        conductor_rect = conductor_text.get_rect(topleft=(20, 200))
+        conductor_rect = conductor_text.get_rect(topleft=(20, 150))
         screen.blit(conductor_text, conductor_rect)
 
         score_text = font.render(f'Score: {Score.score}', False, 'White')
@@ -425,13 +442,26 @@ class Interface:
     def display_info(self):
         global judgement_fadeout
         global firstnote_clicked
-        combo_img = font.render(f"{Score.combo}", True, (255, 222, 0))
+        combo_img = combofont.render('COMBO', True, (24, 24, 24))
+        combo_img_up = combofontup.render('COMBO', True, pygame.Color('White'))
+        combo_rect = combo_img.get_rect(center=(LANE[3][0], (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 + 53))
+        screen.blit(combo_img, combo_rect)
+        combo_rect = combo_img.get_rect(center=(LANE[3][0], (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 + 49))
+        screen.blit(combo_img_up, combo_rect)
+        combo_img = combofont.render(f"{Score.combo}", True, (24,24,24))
+        combo_img_up = combofontup.render(f"{Score.combo}", True, pygame.Color('White'))
         combo_rect = combo_img.get_rect(center=(LANE[3][0], (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2))
         screen.blit(combo_img, combo_rect)
+        combo_rect = combo_img.get_rect(center=(LANE[3][0], (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 - 4))
+        screen.blit(combo_img_up, combo_rect)
+
         if judges:
-            judge_text = bigfont.render(judges[0], False, judgecolor[judges[0]])
-            judge_rect = judge_text.get_rect(center=(LANE[3][0], HEIGHT * 2 / 3))
-            screen.blit(judge_text, judge_rect)
+            judge_img = combofont.render(f"{judges[0]}", True, judgecolor[judges[0]])
+            judge_img_up = combofontup.render(f"{judges[0]}", True, pygame.Color('White'))
+            judge_rect = judge_img.get_rect(center=(LANE[3][0], HEIGHT * 1 / 3))
+            screen.blit(judge_img, judge_rect)
+            judge_rect = judge_img.get_rect(center=(LANE[3][0], HEIGHT * 1 / 3 - 4))
+            screen.blit(judge_img_up, judge_rect)
             if judgement_fadeout == 0:
                 judgement_fadeout = 15
             if judgement_fadeout == 1:
@@ -486,16 +516,22 @@ start_time = time.time()
 previous_time = time.time()
 while running:
     clock.tick_busy_loop(fps)
-
     if judgement_fadeout > 0 & firstnote_clicked: judgement_fadeout -= 1
     if swipe_cd > 0: swipe_cd -= 1
     screen.fill((30, 30, 30))
+    for j in range(20):
+        for i in range(-12, 12):
+            surf = pygame.Surface((abs(20 - j), abs(20 - j))).convert_alpha()
+            surf.fill(pygame.Color("white"))
+            screen.blit(surf, (WIDTH/2 + i * 40, HEIGHT + 100 - j * 45))
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
         Input.handle_event(event)
+
+    Interface.display_UI()
 
     if not isPaused:
         gameloop = [LANE1, LANE2, LANE3, LANE4,  Conductor, beatline]
@@ -505,7 +541,7 @@ while running:
             note.main()
 
     Interface.display_lanes()
-    Interface.display_UI()
     Interface.display_info()
+
 
     pygame.display.update()

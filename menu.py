@@ -47,7 +47,7 @@ def draw_menu_button(text, pos_y, hover=False, glow_color=BASE_GLOW):
 
 def draw_title(glow_color):
     rhythm = render_glow_text("RHYTHM GAME", font_title, TEXT_COLOR, glow_color, 8)
-    rect = rhythm.get_rect(center=(WIDTH/2, 120))
+    rect = rhythm.get_rect(center=(WIDTH/2, 200))
     screen.blit(rhythm, rect)
 
 running = True
@@ -90,7 +90,7 @@ def main_menu():
         screen.blit(bottom_bar, (0, HEIGHT - bar_height))
 
         mx, my = pygame.mouse.get_pos()
-        base_y = HEIGHT/2
+        base_y = HEIGHT/2 - 30
         spacing = 100
         button_rects = []
         new_hovered_index = -1
