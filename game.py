@@ -1,9 +1,8 @@
 from sys import exit
-import json
 import pygame.time, time
 
 from variables import *
-import function
+import function as func
 import menu
 
 pygame.mixer.pre_init(44100, -16, 2, 512)
@@ -61,7 +60,6 @@ class Conductor:
         if self.songpos >= self.nextbeatpos:
             self.lastbeat += 1
             self.nextbeatpos += self.beatDurationMs
-            # print(f'Bar no.{self.barnumber} Last beat = {self.lastbeat}')
         if self.lastbeat == 16:
             self.lastbeat = 0
             self.barnumber += 1
@@ -128,15 +126,13 @@ class Beatline:
     def __init__(self, y=JUDGE_LINE):
         self.bar = 0
         self.bpm = 185
-        self.ms_per_beat = round(60 / bpm/4, 3) * 1000
+        self.ms_per_beat = round(60 / (bpm*4), 3) * 1000
         self.pixel_per_beat = speed * self.ms_per_beat
         self.y = y
         self.lane_start = LANE[1][0]
         self.lane_end = LANE[5][0]
         self.visible_line = []
         self.lastline = 0
-        print(self.ms_per_beat)
-        print(self.pixel_per_beat)
 
     def main(self):
         if Conductor.barnumber >= 0:
@@ -193,7 +189,7 @@ class Note:
         timing_window = (self.bar * 16) + self.beat
         timing_error = abs(hit_window - timing_window)
         if timing_error < 6:
-            if timing_error == 0: judge = 'CRITICAL PERFECT'
+            if timing_error == 0: judge = 'MARVELOUS'
             elif timing_error <= 1: judge = 'PERFECT'
             elif timing_error <= 2: judge = 'GREAT'
             elif timing_error <= 3: judge = 'GOOD'
@@ -231,7 +227,7 @@ class Hold:
         self.draw()
         if self.end > HEIGHT + speed * 10:
             self.kys()
-            judges.append('Miss')
+            judges.append('MISS')
 
     def scroll(self):
         self.y += speed
@@ -270,11 +266,11 @@ class Hold:
         timing_window = (self.bar * 16) + self.beat
         timing_error = abs(hit_window - timing_window)
         if timing_error < 6:
-            if timing_error == 0: judge = 'Critical Perfect'
-            elif timing_error <= 1: judge = 'Perfect'
-            elif timing_error <= 2: judge = 'Great'
-            elif timing_error <= 3: judge = 'Good'
-            else: judge = 'Miss'
+            if timing_error == 0: judge = 'MARVELOUS'
+            elif timing_error <= 1: judge = 'PERFECT'
+            elif timing_error <= 2: judge = 'GREAT'
+            elif timing_error <= 3: judge = 'GOOD'
+            else: judge = 'MISS'
             judges.append(judge)
             return True
         return False
@@ -285,11 +281,11 @@ class Hold:
         timing_window = (self.endbar * 16) + self.endbeat - 2
         timing_error = abs(hit_window - timing_window)
         if timing_error < 6:
-            if timing_error == 0: judge = 'Critical Perfect'
-            elif timing_error <= 1: judge = 'Perfect'
-            elif timing_error <= 2: judge = 'Great'
-            elif timing_error <= 3: judge = 'Good'
-            else: judge = 'Miss'
+            if timing_error == 0: judge = 'MARVELOUS'
+            elif timing_error <= 1: judge = 'PERFECT'
+            elif timing_error <= 2: judge = 'GREAT'
+            elif timing_error <= 3: judge = 'GOOD'
+            else: judge = 'MISS'
             judges.append(judge)
             return True
         return False
@@ -321,7 +317,7 @@ class Swipe:
         self.draw()
         if self.y > HEIGHT + speed * 10:
             self.kys()
-            judges.append('Miss')
+            judges.append('MISS')
 
     def scroll(self):
         self.y += speed
@@ -351,13 +347,13 @@ class Swipe:
         timing_error = abs(hit_window - timing_window)
         if timing_error < 6:
             if self.direction == direction:
-                if timing_error == 0: judge = 'Critical Perfect'
+                if timing_error == 0: judge = 'MARVELOUS'
                 elif timing_error <= 1: judge = 'Perfect'
                 elif timing_error <= 2: judge = 'Great'
                 judges.append(judge)
                 return True
             if timing_error <= 3: judge = 'Good'
-            else: judge = 'Miss'
+            else: judge = 'MISS'
             judges.append(judge)
             return True
         return False
@@ -410,17 +406,21 @@ class Lane:
     def light_up(self):
         if self.waspressed:
             temp_rect = pygame.Rect(LANE[self.num][0], 100, 100, HEIGHT - (HEIGHT - JUDGE_LINE) - 100)
-            function.gradientRect(screen, (200,200,200), (30, 30, 30, 0), temp_rect)
+            func.gradientRect(screen, (200,200,200), (30, 30, 30, 0), temp_rect)
 
 class Scoring:
     def __init__(self):
         self.score = 0
-        self.combo = 0
+        self.combo = 1
         self.accuracy = 100.00
+
+    def comboing(self,judge):
+        if judge != 'MISS': self.combo += 1
+        else: self.combo = 0
 
 class Interface:
     def __init__(self):
-        pass
+        self.lane_mid = LANE[3][0]
 
     def display_UI(self):
         screen.blit(songname_surf, songname_rect)
@@ -440,33 +440,33 @@ class Interface:
         screen.blit(score_text, score_rect)
 
     def display_info(self):
-        global judgement_fadeout
-        global firstnote_clicked
-        combo_img = combofont.render('COMBO', True, (24, 24, 24))
-        combo_img_up = combofontup.render('COMBO', True, pygame.Color('White'))
-        combo_rect = combo_img.get_rect(center=(LANE[3][0], (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 + 53))
-        screen.blit(combo_img, combo_rect)
-        combo_rect = combo_img.get_rect(center=(LANE[3][0], (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 + 49))
-        screen.blit(combo_img_up, combo_rect)
-        combo_img = combofont.render(f"{Score.combo}", True, (24,24,24))
-        combo_img_up = combofontup.render(f"{Score.combo}", True, pygame.Color('White'))
-        combo_rect = combo_img.get_rect(center=(LANE[3][0], (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2))
-        screen.blit(combo_img, combo_rect)
-        combo_rect = combo_img.get_rect(center=(LANE[3][0], (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 - 4))
-        screen.blit(combo_img_up, combo_rect)
+        maxsize, minsize =
+        if Score.combo > 3:
+            combo_img = combofont.render('COMBO', True, (24, 24, 24))
+            combo_img_up = combofontup.render('COMBO', True, pygame.Color('White'))
+            combo_rect = combo_img.get_rect(center=(self.lane_mid, (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 + 53))
+            screen.blit(combo_img, combo_rect)
+            combo_rect = combo_img.get_rect(center=(self.lane_mid, (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 + 49))
+            screen.blit(combo_img_up, combo_rect)
+            combo_img = combofont.render(f"{Score.combo}", True, (24,24,24))
+            combo_img_up = combofontup.render(f"{Score.combo}", True, pygame.Color('White'))
+            combo_rect = combo_img.get_rect(center=(self.lane_mid, (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2))
+            screen.blit(combo_img, combo_rect)
+            combo_rect = combo_img.get_rect(center=(self.lane_mid, (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 - 4))
+            screen.blit(combo_img_up, combo_rect)
 
         if judges:
             judge_img = combofont.render(f"{judges[0]}", True, judgecolor[judges[0]])
-            judge_img_up = combofontup.render(f"{judges[0]}", True, pygame.Color('White'))
-            judge_rect = judge_img.get_rect(center=(LANE[3][0], HEIGHT * 1 / 3))
+            if judges[0] == 'MARVELOUS': outline = pygame.Color('Black')
+            else: outline = pygame.Color('White')
+            judge_img_up = combofontup.render(f"{judges[0]}", True, outline)
+            judge_rect = judge_img.get_rect(center=(self.lane_mid, HEIGHT * 1 / 3))
             screen.blit(judge_img, judge_rect)
-            judge_rect = judge_img.get_rect(center=(LANE[3][0], HEIGHT * 1 / 3 - 4))
+            judge_rect = judge_img.get_rect(center=(self.lane_mid, HEIGHT * 1 / 3 - 4))
             screen.blit(judge_img_up, judge_rect)
-            if judgement_fadeout == 0:
-                judgement_fadeout = 15
-            if judgement_fadeout == 1:
+            if len(judges) > 1:
                 judges.remove(judges[0])
-                firstnote_clicked = True
+                Score.comboing(judges[0])
 
     def display_lanes(self):
         pygame.draw.line(screen, pygame.Color('Green'), (LANE[1][0], JUDGE_LINE),
@@ -475,10 +475,10 @@ class Interface:
             pygame.draw.line(screen, pygame.Color('White'), ((WIDTH / 3) + i * 100, 0),
                              ((WIDTH / 3) + i * 100, HEIGHT),5)
 
+running = True
 notes = []
 judges = []
 
-# menu.main_menu()
 notes.clear()
 judges.clear()
 
@@ -487,16 +487,14 @@ LANE2 = Lane(2,False,False,False)
 LANE3 = Lane(3,False,False,False)
 LANE4 = Lane(4,False,False,False)
 Music = Music()
-Conductor = Conductor(1400)
+Conductor = Conductor(1250)
 beatline = Beatline()
 Input = PlayerInput()
 Interface = Interface()
 Score = Scoring()
 
 Music.loadMusic('Songs/Mesmerizer/Mesmerizer.mp3')
-print(f'Song duration: {round(Music.duration*1000)}')
-# read chart script add node class according to the type to notes list
-with open('Songs/Mesmerizer/Mesmerizer', 'r') as f:
+with open('Songs/Mesmerizer/Mesmerizer.txt', 'r') as f:
     for line in f:
         if not line.strip().startswith('#'):
             x = list(map(float,(line.strip().split(','))))
@@ -510,13 +508,11 @@ with open('Songs/Mesmerizer/Mesmerizer', 'r') as f:
 print('Start game')
 pygame.key.set_repeat(0,0)
 Music.play()
-running = True
 isPaused = False
 start_time = time.time()
 previous_time = time.time()
 while running:
     clock.tick_busy_loop(fps)
-    if judgement_fadeout > 0 & firstnote_clicked: judgement_fadeout -= 1
     if swipe_cd > 0: swipe_cd -= 1
     screen.fill((30, 30, 30))
     for j in range(20):

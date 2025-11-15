@@ -3,7 +3,7 @@ import pygame
 WIDTH, HEIGHT = 1080 , 720
 JUDGE_LINE = HEIGHT - 100
 fps = 60
-speed = 4
+speed = 8
 songoffset = 0
 bpm = 185
 now = 0
@@ -28,7 +28,7 @@ KEYS = {
 }
 
 judgecolor = {
-                    'CRITICAL PERFECT': pygame.Color('Yellow'),
+                    'MARVELOUS': pygame.Color('White'),
                      'PERFECT': pygame.Color('Orange'),
                      'GREAT': pygame.Color('Pink'),
                      'GOOD': pygame.Color('Green'),
