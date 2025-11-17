@@ -1,0 +1,5 @@
+Name= Bad Apple!!
+Bpm= 138
+Difficulty= 6
+Preview_start= 1900
+Genre= touhou

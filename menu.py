@@ -23,9 +23,8 @@ font_title = pygame.font.SysFont(None, 80)
 font_song = pygame.font.SysFont(None, 48)
 font_info = pygame.font.SysFont(None, 36)
 font_button = pygame.font.SysFont(None, 48)
-combofont = pygame.font.Font('fonts/Platinum Sign Under.ttf', 40)
-combofontup = pygame.font.Font('fonts/Platinum Sign Over.ttf', 40)
-
+combofont = pygame.font.Font('fonts/Platinum_under.ttf', 40)
+combofontup = pygame.font.Font('fonts/Platinum_over.ttf', 40)
 
 background_path = "background2.png"
 if os.path.exists(background_path):
@@ -435,3 +434,4 @@ def song_select():
     return None
 
 running = True
+song_select()

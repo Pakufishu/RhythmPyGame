@@ -1,35 +1,44 @@
+from operator import truediv
 from sys import exit
 import pygame.time, time
-
 from variables import *
 import function as func
 import menu
+import dir
+import json
 
 pygame.mixer.pre_init(44100, -16, 2, 512)
 pygame.init()
 pygame.mixer.init()
 
-
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('Rhythm Game')
 clock = pygame.time.Clock()
+
+current_song = 'Mesmerizer'
+current_diff = 'Exp'
+songsdic = dir.getsongdict()
+with open(songsdic[current_song]['settings'],'r') as f:
+    settings = json.load(f)
+
 font = pygame.font.SysFont(None, 50)
-combofont = pygame.font.Font('fonts/Platinum Sign Under.ttf', 40)
-combofontup = pygame.font.Font('fonts/Platinum Sign Over.ttf', 40)
+combofont = pygame.font.Font('fonts/Platinum_under.ttf', 40)
+combofontup = pygame.font.Font('fonts/Platinum_over.ttf', 40)
 
 playlane_obj = pygame.Surface((400, HEIGHT), pygame.SRCALPHA, 32)
 playlane_rect = playlane_obj.get_rect(center=(LANE[3][0],HEIGHT/2))
 playlane_obj = playlane_obj.convert_alpha()
-playlane_obj.fill((0,0,0,85))
+playlane_obj.fill((0,0,0,255))
 
-
-songname_surf = combofont.render('MESMERIZER', False, 'Black')
-songname_surf_up = combofontup.render('MESMERIZER', False, 'White')
+songname_surf = combofont.render(current_song.upper(), False, 'Black')
+songname_surf_up = combofontup.render(current_song.upper(), False, 'White')
 songname_rect = songname_surf.get_rect(topleft=(20,20))
+
 
 lane_sound = pygame.mixer.Sound('sfx/lanesound.wav')
 lane_sound.set_volume(0.1)
-# note_sound = pygame.mixer.Sound('sfx/notesound.wav')
+# hit_sound = pygame.mixer.Sound('sfx/hitsound.wav')
+
 
 class Conductor:
     def __init__(self, offset):
@@ -67,12 +76,13 @@ class Conductor:
 class Music:
     def __init__(self):
         self.duration = None
+        self.song = songsdic[current_song]['Music']
         pass
 
     def loadMusic(self,song):
-        pygame.mixer.music.load(song)
+        pygame.mixer.music.load(self.song)
         pygame.mixer_music.set_volume(0.1)
-        self.duration = pygame.mixer.Sound(song).get_length()
+        self.duration = pygame.mixer.Sound(self.song).get_length()
 
     def play(self):
         pygame.mixer.music.play()
@@ -118,9 +128,10 @@ class PlayerInput:
             if event.key == pygame.K_j: LANE3.key_up()
             if event.key == pygame.K_k: LANE4.key_up()
 
-        for key in pygame.key.get_pressed():
-            if key == pygame.K_ESCAPE:
-                menu.pause()
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_p:
+                print(Conductor.barnumber, Conductor.lastbeat)
+                Music.pause()
 
 class Beatline:
     def __init__(self, y=JUDGE_LINE):
@@ -174,7 +185,7 @@ class Note:
 
     def draw(self):
         pygame.draw.line(screen,pygame.Color('Yellow'),(self.lanestart, self.y),
-                         (self.laneend, self.y), 10)
+                         (self.laneend, self.y), 30)
 
     def hit(self):
         if not self.pressed:
@@ -189,11 +200,11 @@ class Note:
         timing_window = (self.bar * 16) + self.beat
         timing_error = abs(hit_window - timing_window)
         if timing_error < 6:
-            if timing_error == 0: judge = 'MARVELOUS'
-            elif timing_error <= 1: judge = 'PERFECT'
-            elif timing_error <= 2: judge = 'GREAT'
-            elif timing_error <= 3: judge = 'GOOD'
-            else: judge = 'MISS'
+            if timing_error == 0: judge = 'MARVELOUS'; Score.acc['MARVELOUS'] += 1
+            elif timing_error <= 1: judge = 'PERFECT'; Score.acc['PERFECT'] += 1
+            elif timing_error <= 2: judge = 'GREAT'; Score.acc['GREAT'] += 1
+            elif timing_error <= 3: judge = 'GOOD'; Score.acc['GOOD'] += 1
+            else: judge = 'MISS'; Score.acc['MISS'] += 1
             judges.append(judge)
             return True
         return False
@@ -266,11 +277,11 @@ class Hold:
         timing_window = (self.bar * 16) + self.beat
         timing_error = abs(hit_window - timing_window)
         if timing_error < 6:
-            if timing_error == 0: judge = 'MARVELOUS'
-            elif timing_error <= 1: judge = 'PERFECT'
-            elif timing_error <= 2: judge = 'GREAT'
-            elif timing_error <= 3: judge = 'GOOD'
-            else: judge = 'MISS'
+            if timing_error == 0: judge = 'MARVELOUS'; Score.acc['MARVELOUS'] += 1
+            elif timing_error <= 1: judge = 'PERFECT'; Score.acc['PERFECT'] += 1
+            elif timing_error <= 2: judge = 'GREAT'; Score.acc['GREAT'] += 1
+            elif timing_error <= 3: judge = 'GOOD'; Score.acc['GOOD'] += 1
+            else: judge = 'MISS'; Score.acc['MISS'] += 1
             judges.append(judge)
             return True
         return False
@@ -278,14 +289,14 @@ class Hold:
     def holdjudgement(self): #t = d/v
         bar, beat = Conductor.barnumber, Conductor.lastbeat
         hit_window = (bar + 1) * 16 + beat
-        timing_window = (self.endbar * 16) + self.endbeat - 2
+        timing_window = (self.endbar * 16) + self.endbeat
         timing_error = abs(hit_window - timing_window)
         if timing_error < 6:
-            if timing_error == 0: judge = 'MARVELOUS'
-            elif timing_error <= 1: judge = 'PERFECT'
-            elif timing_error <= 2: judge = 'GREAT'
-            elif timing_error <= 3: judge = 'GOOD'
-            else: judge = 'MISS'
+            if timing_error == 0: judge = 'MARVELOUS'; Score.acc['MARVELOUS'] += 1
+            elif timing_error <= 1: judge = 'PERFECT'; Score.acc['PERFECT'] += 1
+            elif timing_error <= 2: judge = 'GREAT'; Score.acc['GREAT'] += 1
+            elif timing_error <= 3: judge = 'GOOD'; Score.acc['GOOD'] += 1
+            else: judge = 'MISS'; Score.acc['MISS'] += 1
             judges.append(judge)
             return True
         return False
@@ -347,9 +358,9 @@ class Swipe:
         timing_error = abs(hit_window - timing_window)
         if timing_error < 6:
             if self.direction == direction:
-                if timing_error == 0: judge = 'MARVELOUS'
-                elif timing_error <= 1: judge = 'Perfect'
-                elif timing_error <= 2: judge = 'Great'
+                if timing_error == 0: judge = 'MARVELOUS'; Score.acc['MARVELOUS'] += 1
+                elif timing_error <= 1: judge = 'Perfect'; Score.acc['PERFECT'] += 1
+                elif timing_error <= 2: judge = 'Great'; Score.acc['GREAT'] += 1
                 judges.append(judge)
                 return True
             if timing_error <= 3: judge = 'Good'
@@ -397,7 +408,6 @@ class Lane:
             # print(f'Lane {self.num} Down')
             self.waspressed = True
             self.ispressed = True
-            print(Conductor.barnumber, Conductor.lastbeat)
             for notedown in notes:
                 if notedown.lane == self.num:
                     notedown.hit()
@@ -412,11 +422,16 @@ class Scoring:
     def __init__(self):
         self.score = 0
         self.combo = 1
+        self.maxcombo = 0
         self.accuracy = 100.00
+        self.acc = {'MARVELOUS':0,'PERFECT':0,'GREAT':0,'GOOD':0,'MISS':0}
+
+    def update(self):
+        pass
 
     def comboing(self,judge):
         if judge != 'MISS': self.combo += 1
-        else: self.combo = 0
+        else: self.maxcombo = self.combo; self.combo = 0
 
 class Interface:
     def __init__(self):
@@ -431,16 +446,11 @@ class Interface:
         time_rect = time_text.get_rect(topleft=(20, 100))
         screen.blit(time_text, time_rect)
 
-        conductor_text = font.render(f'Conductor: {Conductor.barnumber, Conductor.lastbeat}', False, 'White')
-        conductor_rect = conductor_text.get_rect(topleft=(20, 150))
-        screen.blit(conductor_text, conductor_rect)
-
         score_text = font.render(f'Score: {Score.score}', False, 'White')
         score_rect = score_text.get_rect(topright=(WIDTH - 20, 20))
         screen.blit(score_text, score_rect)
 
     def display_info(self):
-        maxsize, minsize =
         if Score.combo > 3:
             combo_img = combofont.render('COMBO', True, (24, 24, 24))
             combo_img_up = combofontup.render('COMBO', True, pygame.Color('White'))
@@ -487,14 +497,14 @@ LANE2 = Lane(2,False,False,False)
 LANE3 = Lane(3,False,False,False)
 LANE4 = Lane(4,False,False,False)
 Music = Music()
-Conductor = Conductor(1250)
+Conductor = Conductor(settings['offset'])
 beatline = Beatline()
 Input = PlayerInput()
 Interface = Interface()
 Score = Scoring()
 
-Music.loadMusic('Songs/Mesmerizer/Mesmerizer.mp3')
-with open('Songs/Mesmerizer/Mesmerizer.txt', 'r') as f:
+Music.loadMusic(songsdic[current_song]['Music'])
+with open(songsdic[current_song][current_diff], 'r') as f:
     for line in f:
         if not line.strip().startswith('#'):
             x = list(map(float,(line.strip().split(','))))
@@ -511,6 +521,7 @@ Music.play()
 isPaused = False
 start_time = time.time()
 previous_time = time.time()
+
 while running:
     clock.tick_busy_loop(fps)
     if swipe_cd > 0: swipe_cd -= 1
@@ -538,6 +549,5 @@ while running:
 
     Interface.display_lanes()
     Interface.display_info()
-
 
     pygame.display.update()
