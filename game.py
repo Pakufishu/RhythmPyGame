@@ -9,7 +9,7 @@ pygame.mixer.pre_init(44100, -16, 2, 512)
 pygame.init()
 pygame.mixer.init()
 
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+screen = pygame.display.set_mode((WIDTH, HEIGHT),pygame.RESIZABLE)
 pygame.display.set_caption('Rhythm Game')
 clock = pygame.time.Clock()
 
@@ -129,6 +129,18 @@ class PlayerInput:
             if event.key == pygame.K_p:
                 print(pygame.mixer.music.get_pos())
                 Music.pause()
+
+        if event.type == pygame.VIDEORESIZE:
+            screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
+            global HEIGHT, WIDTH, LANE
+            WIDTH, HEIGHT = screen.get_size()
+            LANE = {
+                1: ((WIDTH / 3), 0),
+                2: ((WIDTH / 3) + 100, 0),
+                3: ((WIDTH / 3) + 200, 0),
+                4: ((WIDTH / 3) + 300, 0),
+                5: ((WIDTH / 3) + 400, 0)
+            }
 
 class Beatline:
     def __init__(self, y=JUDGE_LINE):
@@ -380,10 +392,13 @@ class Lane:
         self.keystate = keystate
         self.ispressed = ispressed
         self.waspressed = waspressed
+        self.fadealpha = 0
 
     def main(self): #Continuous function
         self.key_check()
         self.light_up()
+        if self.waspressed: self.fadealpha = 200
+        if self.fadealpha > 0 : self.fadealpha -= 25
 
     def key_down(self):
         self.keystate = True
@@ -413,9 +428,10 @@ class Lane:
                     return
 
     def light_up(self):
-        if self.waspressed:
+        if self.fadealpha > 0:
             temp_rect = pygame.Rect(LANE[self.num][0], 100, 100, HEIGHT - (HEIGHT - JUDGE_LINE) - 100)
-            func.gradientRect(screen, (200,200,200), (30, 30, 30, 0), temp_rect)
+            light = self.fadealpha
+            func.gradientRect(screen, (light,light,light), (0, 0, 0, 0), temp_rect)
 
 class Scoring:
     def __init__(self):

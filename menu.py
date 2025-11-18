@@ -100,10 +100,6 @@ def load_song_and_background():
 
 # initial main-menu music/background load
 load_song_and_background()
-with open(songsdict[song_player.song]['settings'],'r') as f:
-    settings = json.load(f)
-print(song_player.song)
-print(settings)
 
 # --- Font setup ---
 def get_scale():
@@ -123,7 +119,7 @@ update_fonts()
 
 # --- Title ---
 def draw_title():
-    func.draw_double_text(screen,"RHYTHM GAME", font_title, font_under_title, TEXT_COLOR, BLACK, (WIDTH / 2, HEIGHT * 0.18))
+    func.draw_double_text(screen,"PYTRHYTHM", font_title, font_under_title, TEXT_COLOR, BLACK, (WIDTH / 2, HEIGHT * 0.18))
 
 # --- Menu button ---
 def draw_menu_button(text, y, hover=False):
@@ -276,6 +272,7 @@ def start_preview(song_file):
 # --- Song selection scene---
 def song_selection_screen():
     global WIDTH, HEIGHT, screen, running
+    scroll_offset = 0
     cover_rotation = 0
     while running:
         screen.fill(BG_COLOR)
@@ -286,7 +283,7 @@ def song_selection_screen():
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
                 if cover_rect.collidepoint(mx, my):
-                    print('k')
+                    print('Enter Play')
 
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
@@ -300,25 +297,29 @@ def song_selection_screen():
                 global HEIGHT, WIDTH
                 WIDTH, HEIGHT = screen.get_size()
 
+        for song in songsdict:
+            with open(songsdict[song]['settings'], 'r') as f:
+                settings = json.load(f)
+            y = settings['ID'] * 200 - scroll_offset
+            img = pygame.image.load(songsdict[song]['Art']).convert_alpha()
+            selectart = pygame.transform.scale(img, (80, 80))
+            selectart_rect = selectart.get_rect(topleft=(WIDTH - 300, 200 + y))
+            screen.blit(selectart, selectart_rect)
+            pygame.draw.polygon(screen, pygame.Color('Purple'), ((WIDTH - 300, 200 + y),
+                            (WIDTH - 400, 200 + y), (WIDTH - 450, 280 + y),(WIDTH - 350, 280 + y)))
+            pygame.draw.polygon(screen, pygame.Color('White'), ((WIDTH, 200 + y),
+                            (WIDTH - 220, 200 + y), (WIDTH - 270, 280 + y), (WIDTH, 280 + y)))
+
+            diff_text = font_text_big.render(str(settings['Difficulty']), True, pygame.Color('White'))
+            diff_rect = diff_text.get_rect(center=(WIDTH - 380, 240 + y))
+            screen.blit(diff_text, diff_rect)
+
+        # --- UI (Difficulty Selection, Cover art) ---
         img = pygame.image.load(song_player.cover).convert_alpha()
         cover_art = pygame.transform.scale(img, (HEIGHT*3.5 // 7, HEIGHT*3.5 // 7))
         cover_art = pygame.transform.rotate(cover_art, 6 + 3*math.sin(cover_rotation))
         cover_rect = cover_art.get_rect(midbottom=(WIDTH//3, HEIGHT*3//4))
         screen.blit(cover_art, cover_rect)
-
-        img = pygame.image.load(song_player.cover).convert_alpha()
-        selectart = pygame.transform.scale(img, (80, 80))
-        selectart_rect = selectart.get_rect(topleft=(WIDTH-300,200))
-
-        screen.blit(selectart, selectart_rect)
-
-        pygame.draw.polygon(screen, pygame.Color('Purple'), ((WIDTH-300, 200),
-                                    (WIDTH-400, 200), (WIDTH-450, 280), (WIDTH-350, 280)))
-        pygame.draw.polygon(screen, pygame.Color('White'), ((WIDTH, 200),
-                                    (WIDTH - 220, 200), (WIDTH - 270, 280),(WIDTH, 280)))
-        diff_text = font_text_big.render(str(settings['Difficulty']), True, pygame.Color('White'))
-        diff_rect = diff_text.get_rect(center=(WIDTH - 380, 240))
-        screen.blit(diff_text, diff_rect)
 
         func.draw_trapezoid(screen, pygame.Color('White'), 200, HEIGHT-160, 400, 40, -20)
         func.draw_trapezoid(screen, pygame.Color('White'), 200, HEIGHT-120, 420, 40, 20)
