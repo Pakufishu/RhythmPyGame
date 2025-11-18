@@ -1,8 +1,9 @@
 {
   "Name": "Mesmerizer",
+  "Artist": "32ki",
   "Bpm": 185,
-  "Difficulty": 8.5,
-  "Preview_start": 1900,
+  "Difficulty": 8,
+  "Preview_start": 1.9,
   "offset": 1305,
   "Genre": "nico"
 }

@@ -1,9 +1,7 @@
-from operator import truediv
 from sys import exit
 import pygame.time, time
 from variables import *
 import function as func
-import menu
 import dir
 import json
 
@@ -33,7 +31,6 @@ playlane_obj.fill((0,0,0,255))
 songname_surf = combofont.render(current_song.upper(), False, 'Black')
 songname_surf_up = combofontup.render(current_song.upper(), False, 'White')
 songname_rect = songname_surf.get_rect(topleft=(20,20))
-
 
 lane_sound = pygame.mixer.Sound('sfx/lanesound.wav')
 lane_sound.set_volume(0.1)
@@ -130,7 +127,7 @@ class PlayerInput:
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_p:
-                print(Conductor.barnumber, Conductor.lastbeat)
+                print(pygame.mixer.music.get_pos())
                 Music.pause()
 
 class Beatline:
@@ -184,7 +181,8 @@ class Note:
         self.y += speed
 
     def draw(self):
-        pygame.draw.line(screen,pygame.Color('Yellow'),(self.lanestart, self.y),
+        if HEIGHT > self.y > 0:
+            pygame.draw.line(screen,pygame.Color('Yellow'),(self.lanestart, self.y),
                          (self.laneend, self.y), 30)
 
     def hit(self):
@@ -199,7 +197,7 @@ class Note:
         hit_window = (bar + 1) * 16 + beat
         timing_window = (self.bar * 16) + self.beat
         timing_error = abs(hit_window - timing_window)
-        if timing_error < 6:
+        if timing_error < 4:
             if timing_error == 0: judge = 'MARVELOUS'; Score.acc['MARVELOUS'] += 1
             elif timing_error <= 1: judge = 'PERFECT'; Score.acc['PERFECT'] += 1
             elif timing_error <= 2: judge = 'GREAT'; Score.acc['GREAT'] += 1
@@ -245,20 +243,21 @@ class Hold:
         self.end += speed
 
     def draw(self):
-        if self.end > JUDGE_LINE:
-            return
-        if self.pressed:
-            pygame.draw.line(screen, pygame.Color('Red'), (self.lanestart + 50, JUDGE_LINE),
-            (self.lanestart + 50, self.end), 80)
-            pygame.draw.line(screen, pygame.Color('Red'), (self.lanestart, self.end),
-            (self.laneend, self.end), 20)
-            return
-        pygame.draw.line(screen,pygame.Color('Red'),(self.lanestart+50, self.y),
-            (self.lanestart+50, self.end), 80)
-        pygame.draw.line(screen,pygame.Color('Red'),(self.lanestart, self.y),
-            (self.laneend, self.y), 20)
-        pygame.draw.line(screen,pygame.Color('Red'),(self.lanestart, self.end),
-            (self.laneend, self.end), 20)
+        if self.y > 0:
+            if self.end > JUDGE_LINE:
+                return
+            if self.pressed and self.y > JUDGE_LINE:
+                pygame.draw.line(screen, pygame.Color('Red'), (self.lanestart + 50, JUDGE_LINE),
+                (self.lanestart + 50, self.end), 80)
+                pygame.draw.line(screen, pygame.Color('Red'), (self.lanestart, self.end),
+                (self.laneend, self.end), 20)
+                return
+            pygame.draw.line(screen,pygame.Color('Red'),(self.lanestart+50, self.y),
+                (self.lanestart+50, self.end), 80)
+            pygame.draw.line(screen,pygame.Color('Red'),(self.lanestart, self.y),
+                (self.laneend, self.y), 20)
+            pygame.draw.line(screen,pygame.Color('Red'),(self.lanestart, self.end),
+                (self.laneend, self.end), 20)
 
     def hit(self):
         if not self.pressed:
@@ -426,8 +425,8 @@ class Scoring:
         self.accuracy = 100.00
         self.acc = {'MARVELOUS':0,'PERFECT':0,'GREAT':0,'GOOD':0,'MISS':0}
 
-    def update(self):
-        pass
+    def main(self):
+        self.score = self.acc['MARVELOUS'] * 500 + self.acc['PERFECT'] * 300 + self.acc['GREAT'] * 200 + self.acc['GOOD'] * 50
 
     def comboing(self,judge):
         if judge != 'MISS': self.combo += 1
@@ -442,13 +441,11 @@ class Interface:
         screen.blit(songname_surf_up, songname_rect)
         screen.blit(playlane_obj, playlane_rect)
 
-        time_text = font.render(f'Time: {pygame.mixer.music.get_pos()/1000}', False, 'Gray')
-        time_rect = time_text.get_rect(topleft=(20, 100))
-        screen.blit(time_text, time_rect)
-
-        score_text = font.render(f'Score: {Score.score}', False, 'White')
+        score_text = combofont.render(str(Score.score), False, 'Black')
+        score_text_up = combofontup.render(str(Score.score), False, 'White')
         score_rect = score_text.get_rect(topright=(WIDTH - 20, 20))
         screen.blit(score_text, score_rect)
+        screen.blit(score_text_up, score_rect)
 
     def display_info(self):
         if Score.combo > 3:
@@ -521,7 +518,6 @@ Music.play()
 isPaused = False
 start_time = time.time()
 previous_time = time.time()
-
 while running:
     clock.tick_busy_loop(fps)
     if swipe_cd > 0: swipe_cd -= 1
@@ -541,7 +537,7 @@ while running:
     Interface.display_UI()
 
     if not isPaused:
-        gameloop = [LANE1, LANE2, LANE3, LANE4,  Conductor, beatline]
+        gameloop = [LANE1, LANE2, LANE3, LANE4,  Conductor, beatline, Score]
         for main in gameloop:
             main.main()
         for note in notes:
@@ -549,5 +545,13 @@ while running:
 
     Interface.display_lanes()
     Interface.display_info()
+
+    if isPaused:
+        blurred = func.blur_surface(screen.copy(), passes=3, scale_factor=0.25)
+        screen.blit(blurred, (0, 0))
+
+    if pygame.mixer.music.get_pos() == -1:
+        print('Song end')
+
 
     pygame.display.update()

@@ -1,437 +1,447 @@
 import sys
 import os
+import pygame
+import numpy as np
+from scipy.io import wavfile
+import random
+import dir
+import function as func
+import json
 import math
-from variables import *
 
 pygame.init()
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-clock = pygame.time.Clock()
+
+# --- Screen settings ---
+WIDTH, HEIGHT = 1080, 720
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("Rhythm Game Menu")
+clock = pygame.time.Clock()
 
-# Color scheme
-TEXT_COLOR = (220, 240, 255)   # ice white-blue
-HOVER_COLOR = (255, 255, 0)    # yellow for hover
-SELECTED_COLOR = (255, 255, 255)  # red for selected
-BASE_GLOW = (0, 200, 255)      # neon cyan
-BG_COLOR = (10, 10, 20)        # deep navy
-CARD_COLOR = (255, 92, 255)      # darker blue for song cards
-CARD_HOVER_COLOR = (255, 92, 255)  # lighter for hover
-CARD_TEXT_BACK = (50, 60, 80)
+# --- Base resolution ---
+BASE_WIDTH = 1080
+BASE_HEIGHT = 720
 
-# Fonts
-font_title = pygame.font.SysFont(None, 80)
-font_song = pygame.font.SysFont(None, 48)
-font_info = pygame.font.SysFont(None, 36)
-font_button = pygame.font.SysFont(None, 48)
-combofont = pygame.font.Font('fonts/Platinum_under.ttf', 40)
-combofontup = pygame.font.Font('fonts/Platinum_over.ttf', 40)
+# --- Colors ---
+TEXT_COLOR = (220, 240, 255)
+BLACK = (0, 0, 0)
+HOVER_COLOR = (255, 255, 0)
+BG_COLOR = (10, 10, 20)
+ARROW_COLOR = (255, 255, 255)
 
-background_path = "background2.png"
-if os.path.exists(background_path):
-    background_img = pygame.image.load(background_path).convert()
-    background_img = pygame.transform.scale(background_img, (WIDTH, HEIGHT))
-else:
-    background_img = None
+# --- Asset folders dict ---
+songsdict = dir.getsongdict()
 
-hover_sound_path = "sfx/hover.wav"
-hover_sound = pygame.mixer.Sound(hover_sound_path) if os.path.exists(hover_sound_path) else None
+# --- Load backgrounds and music ---
+class SongPlayer:
+    def __init__(self):
+        self.song = 'Mesmerizer'
+        self.songplaytrack = []
+        self.songdic = songsdict[self.song]
+        self.music = songsdict[self.song]['Music']
+        self.cover = songsdict[self.song]['Art']
 
-class Song:
-    def __init__(self, name, bpm, difficulty, preview_start, genre, folder_path, audio_file, chart_file, image_file):
-        self.name = name
-        self.bpm = bpm
-        self.difficulty = difficulty
-        self.preview_start = preview_start
-        self.genre = genre
-        self.folder_path = folder_path
-        self.audio_file = audio_file
-        self.chart_file = chart_file
-        self.image_file = image_file
+    def play(self):
+        pass
 
-def scan_songs():
-    songs = []
-    songs_dir = "Songs"
+    def randomSong(self):
+        self.song = random.choice(list(songsdict.keys()))
+        self.songdic = songsdict[self.song]
+        self.music = songsdict[self.song]['Music']
+        self.cover = songsdict[self.song]['Art']
+        return self.song
 
-    if not os.path.exists(songs_dir):
-        return songs
-    for folder_name in os.listdir(songs_dir):
-        folder_path = os.path.join(songs_dir, folder_name)
-        if os.path.isdir(folder_path):
-            audio_file = None
-            chart_file = None
-            for file in os.listdir(folder_path):
-                if file.endswith('.mp3'):
-                    audio_file = os.path.join(folder_path, file)
-                if file.endswith('.txt') and not file.endswith('settings.txt'):
-                    chart_file = os.path.join(folder_path, file)
-                if file.endswith('.jpg') or file.endswith('.png'):
-                    image = os.path.join(folder_path, file)
-            metadata_path = os.path.join(folder_path, 'settings.txt')
-            if os.path.exists(metadata_path):
-                with open(metadata_path, 'r') as f:
-                    info = []
-                    for line in f:
-                        if line.strip().startswith('Name='):
-                            name = line.strip('Name= ').strip()
-                            continue
-                        data = line.split(' ')[1].strip('\n')
-                        try: data = int(data)
-                        except:
-                            try: data = float(data);
-                            except: pass
-                        info.append(data)
-                    song = Song(name, *info, folder_path, audio_file, chart_file, image)
-                    songs.append(song)
-    return songs
+class BackgroundManager:
+    def __init__(self):
+        self.songbgfolder = songsdict[song_player.song]['Bg']
+        self.background_img = ''
 
-def render_glow_text(text, font, color, glow_color, glow_strength=4):
-    base = font.render(text, True, color)
-    glow = font.render(text, True, glow_color)
-    surf = pygame.Surface((base.get_width() + 20, base.get_height() + 20), pygame.SRCALPHA)
-    for dx in range(-glow_strength, glow_strength + 1):
-        for dy in range(-glow_strength, glow_strength + 1):
-            if dx**2 + dy**2 <= glow_strength**2:
-                surf.blit(glow, (dx + 10, dy + 10))
-    surf.blit(base, (10, 10))
-    return surf
+    def loadBackground(self):
+        self.songbgfolder = songsdict[song_player.song]['Bg']
+        img = pygame.image.load(background.songbgfolder).convert()
+        self.background_img = pygame.transform.scale(img, (WIDTH+100, HEIGHT+100))
 
-def draw_menu_button(text, pos_y, hover=False, glow_color=BASE_GLOW):
-    color = HOVER_COLOR if hover else TEXT_COLOR
-    glow_strength = 8 if hover else 3
-    text_surf = render_glow_text(text, font_button, color, glow_color, glow_strength)
-    rect = text_surf.get_rect(center=(WIDTH/2, pos_y))
-    screen.blit(text_surf, rect)
-    return rect
+song_player = SongPlayer()
+background = BackgroundManager()
 
-def draw_title(glow_color):
-    rhythm = render_glow_text("RHYTHM GAME", font_title, TEXT_COLOR, glow_color, 8)
-    rect = rhythm.get_rect(center=(WIDTH/2, 200))
-    screen.blit(rhythm, rect)
+# --- Globals ---
+background_img = None
+audio_data = None
+sample_rate = None
+last_song = None
 
-buttons = ["Play", "Options", "Credits", "Back to desktop"]
+# --- Black overlay ---
+black_overlay = pygame.Surface((WIDTH, HEIGHT))
+black_overlay.fill(BLACK)
+black_opacity = 100
+black_overlay.set_alpha(black_opacity)
 
-def main_menu():
-    global running
-    running = True
-    time_elapsed = 0
-    bar_alpha = 0
-    bar_fade_speed = 200
-    hovered_index = -1
-    while running:
-        dt = clock.tick(60) / 1000.0
-        time_elapsed += dt
+# --- Hover & other SFX ---
+hover_sound = pygame.mixer.Sound("sfx/hover.wav")
+# other_sfx = pygame.mixer.Sound("sfx.wav")
 
-        if background_img:
-            screen.blit(background_img, (0, 0))
-        else:
-            screen.fill(BG_COLOR)
+# --- Load a random main-menu song and matching background (if any) ---
+def load_song_and_background():
+    global audio_data, sample_rate, background_img, last_song
+    new_song = song_player.randomSong()
+    last_song = new_song
+    music_path = song_player.music
+    background.loadBackground()
+    background_img = background.background_img
+    try:
+        pygame.mixer.music.load(music_path)
+        pygame.mixer.music.set_volume(0.1)
+        pygame.mixer.music.play(-1)
+        sample_rate, audio_data = wavfile.read(music_path)
+        if len(audio_data.shape) > 1:
+            audio_data = audio_data.mean(axis=1)
+    except Exception:
+        audio_data = None
+        sample_rate = None
 
-        pulse = (math.sin(time_elapsed * 2.5) + 1) / 2  # 0→1 smoothly
-        glow_intensity = (
-            int(BASE_GLOW[0] * (0.5 + 0.5 * pulse)),
-            int(BASE_GLOW[1] * (0.7 + 0.3 * pulse)),
-            int(BASE_GLOW[2])
-        )
-        draw_title(glow_intensity)
+# initial main-menu music/background load
+load_song_and_background()
+with open(songsdict[song_player.song]['settings'],'r') as f:
+    settings = json.load(f)
+print(song_player.song)
+print(settings)
 
-        if bar_alpha < 180:
-            bar_alpha += bar_fade_speed * dt
-            if bar_alpha > 180:
-                bar_alpha = 180
-        bar_height = 100
-        top_bar = pygame.Surface((WIDTH, bar_height), pygame.SRCALPHA)
-        top_bar.fill((0, 0, 0, int(bar_alpha)))
-        screen.blit(top_bar, (0, 0))
-        bottom_bar = pygame.Surface((WIDTH, bar_height), pygame.SRCALPHA)
-        bottom_bar.fill((0, 0, 0, int(bar_alpha)))
-        screen.blit(bottom_bar, (0, HEIGHT - bar_height))
+# --- Font setup ---
+def get_scale():
+    return min(WIDTH / BASE_WIDTH, HEIGHT / BASE_HEIGHT)
 
-        mx, my = pygame.mouse.get_pos()
-        base_y = HEIGHT/2 - 30
-        spacing = 100
-        button_rects = []
-        new_hovered_index = -1
+def update_fonts():
+    global font_title, font_menu, font_under_title, font_under_menu, font_text, font_text_big
+    scale = get_scale()
+    font_title = pygame.font.Font(os.path.join("fonts", "Platinum_over.ttf"), int(70 * scale))
+    font_under_title = pygame.font.Font(os.path.join("fonts", "Platinum_under.ttf"), int(70 * scale))
+    font_menu = pygame.font.Font(os.path.join("fonts", "Platinum_over.ttf"), int(50 * scale))
+    font_under_menu = pygame.font.Font(os.path.join("fonts", "Platinum_under.ttf"), int(50 * scale))
+    font_text = pygame.font.Font(os.path.join("fonts", "Designer.otf"), int(30 * scale))
+    font_text_big = pygame.font.Font(os.path.join("fonts", "Designer.otf"), int(50 * scale))
 
-        for i, text in enumerate(buttons):
-            rect = draw_menu_button(text, base_y + i * spacing, hover=False, glow_color=glow_intensity)
-            if rect.collidepoint(mx, my):
-                rect = draw_menu_button(text, base_y + i * spacing, hover=True, glow_color=glow_intensity)
-                new_hovered_index = i
-            button_rects.append(rect)
+update_fonts()
 
-        if new_hovered_index != hovered_index:
-            hovered_index = new_hovered_index
-            if hovered_index != -1 and hover_sound:
-                hover_sound.play()
+# --- Title ---
+def draw_title():
+    func.draw_double_text(screen,"RHYTHM GAME", font_title, font_under_title, TEXT_COLOR, BLACK, (WIDTH / 2, HEIGHT * 0.18))
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                for i, rect in enumerate(button_rects):
-                    if rect.collidepoint(event.pos):
-                        print(f"{buttons[i]} clicked")
-                        if buttons[i] == "Play":
-                            song_select()
-                        if buttons[i] == "Back to desktop":
-                            running = False
+# --- Menu button ---
+def draw_menu_button(text, y, hover=False):
+    color_top = HOVER_COLOR if hover else TEXT_COLOR
+    color_bottom = BLACK
+    return func.draw_double_text(screen, text, font_menu, font_under_menu, color_top, color_bottom, (WIDTH / 2, y), center=True)
 
-        pygame.display.flip()
+# --- Visualizer ---
+bar_values = np.zeros(70)
 
-    pygame.quit()
-    sys.exit()
+def draw_visualizer(audio_data, sample_rate):
+    global bar_values
+    if audio_data is None or sample_rate is None: return
+    pos_ms = pygame.mixer.music.get_pos()
+    if pos_ms < 0: return
+    idx = int((pos_ms / 1000.0) * sample_rate)
+    window = 4096
+    if idx + window > len(audio_data): return
+    segment = audio_data[idx:idx + window]
+    fft_data = np.abs(np.fft.rfft(segment))
+    fft_data = fft_data[:len(fft_data) // 2]
+    num_bars = len(bar_values)
+    bar_width = WIDTH / num_bars
+    fft_bins = np.linspace(0, len(fft_data), num_bars, endpoint=False, dtype=int)
+    max_height = HEIGHT * 0.4
+    smooth = 0.2
+    if np.max(fft_data + 1e-6) == 0: return
+    for i in range(num_bars):
+        val = fft_data[fft_bins[i]] / np.max(fft_data + 1e-6)
+        target = val * max_height
+        bar_values[i] = bar_values[i] * (1 - smooth) + target * smooth
+        x = i * bar_width
+        pygame.draw.rect(screen, (255, 255, 255), (x, 0, bar_width - 2, bar_values[i]))
+        pygame.draw.rect(screen, (255, 255, 255), (x, HEIGHT - bar_values[i], bar_width - 2, bar_values[i]))
 
+# --- Cinematic bars ---
+def draw_cinematic_bars():
+    h = int(HEIGHT * 0.05)
+    pygame.draw.rect(screen, BLACK, (0, 0, WIDTH, h))
+    pygame.draw.rect(screen, BLACK, (0, HEIGHT - h, WIDTH, h))
 
-def draw_carousel_card(song, x, y, width, height, scale=1.0, is_center=False, alpha=255):
-    card_surf = pygame.Surface((int(width * scale), int(height * scale)), pygame.SRCALPHA)
-    card_color = (*CARD_COLOR, alpha) if not is_center else (*CARD_HOVER_COLOR, alpha)
-    if is_center:
-        # Center card gets a special glow effect
-        glow_color = (*BASE_GLOW, alpha // 2)
-        pygame.draw.rect(card_surf, glow_color, (0, 0, int(width * scale), int(height * scale)))
-        pygame.draw.rect(card_surf, card_color, (5, 5, int(width * scale) - 10, int(height * scale) - 10))
-        pygame.draw.rect(card_surf, (*SELECTED_COLOR, alpha), (0, 0, int(width * scale), int(height * scale)), 4)
-    else:
-        pygame.draw.rect(card_surf, card_color, (0, 0, int(width * scale), int(height * scale)))
-        pygame.draw.rect(card_surf, (*TEXT_COLOR, alpha // 2), (0, 0, int(width * scale), int(height * scale)), 2)
+# --- Slider class (unchanged) ---
+class Slider:
+    def __init__(self, x, y, width, value=0.5):
+        self.x, self.y, self.width, self.value = int(x), int(y), int(width), float(value)
+        self.height, self.handle_radius = 8, 12
+        self.dragging = False
 
-    font_size = int(48 * scale) if is_center else int(36 * scale)
-    scaled_font = pygame.font.SysFont(None, max(24, font_size))
-    name_color = (*SELECTED_COLOR, alpha) if is_center else (*TEXT_COLOR, alpha)
+    def draw(self, surf):
+        pygame.draw.rect(surf, (140, 140, 160), (self.x, self.y - self.height // 2, self.width, self.height),
+                         border_radius=4)
+        pygame.draw.rect(surf, (60, 200, 255),
+                         (self.x, self.y - self.height // 2, int(self.width * self.value), self.height),
+                         border_radius=4)
+        hx = self.x + int(self.value * self.width)
+        pygame.draw.circle(surf, (250, 250, 250), (hx, self.y), self.handle_radius)
+        pygame.draw.circle(surf, (100, 100, 120), (hx, self.y), self.handle_radius, 3)
 
-    # Truncate long names
-    display_name = song.name
-    if len(display_name) > 15:
-        display_name = display_name[:12] + "..."
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            mx, my = event.pos
+            hx = self.x + int(self.value * self.width)
+            if (mx - hx) ** 2 + (my - self.y) ** 2 <= self.handle_radius ** 2: self.dragging = True
+        elif event.type == pygame.MOUSEBUTTONUP:
+            self.dragging = False
+        elif event.type == pygame.MOUSEMOTION and self.dragging:
+            mx = event.pos[0]
+            self.value = max(0.0, min(1.0, (mx - self.x) / self.width))
 
-    name_surf = scaled_font.render(display_name, True, name_color)
-    name_rect = name_surf.get_rect(center=(int(width * scale) // 2, int(height * scale)))
-    card_surf.blit(name_surf, name_rect)
+# --- Settings scene ---
+def settings_scene():
+    global WIDTH, HEIGHT, screen, hover_sound, running
+    snapshot = screen.copy()
+    blurred = func.blur_surface(snapshot, passes=3, scale_factor=0.25)
+    panel_w = int(WIDTH * 0.5)
+    panel_h = int(HEIGHT * 0.68)
+    panel_x = (WIDTH - panel_w) // 2
+    panel_y = (HEIGHT - panel_h) // 2
 
-    # Position the card surface on screen
-    final_rect = card_surf.get_rect(center=(x, y))
-    screen.blit(card_surf, final_rect)
+    panel = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
 
-    image = pygame.image.load(song.image_file).convert()
-    image = pygame.transform.scale(image, (int(width * scale * 0.75), int(height * scale * 0.75)))
-    image_rect = image.get_rect(center=(x,y))
-    screen.blit(image, image_rect)
+    panel_scale = panel_w / BASE_WIDTH
+    title_font = pygame.font.Font(os.path.join("fonts", "Platinum_over.ttf"), int(72 * panel_scale))
+    label_font = pygame.font.Font(os.path.join("fonts", "Platinum_over.ttf"), int(40 * panel_scale))
 
-    return pygame.Rect(final_rect.x, final_rect.y, int(width * scale), int(height * scale))
-
-
-def draw_navigation_arrow(x, y, direction, is_hovered=False, enabled=True):
-    """Draw navigation arrows (left/right)"""
-    if not enabled:
-        color = (100, 100, 100)
-        alpha = 100
-    else:
-        color = HOVER_COLOR if is_hovered else TEXT_COLOR
-        alpha = 255
-
-    # Create arrow surface
-    arrow_size = 60 if is_hovered else 50
-    arrow_surf = pygame.Surface((arrow_size, arrow_size), pygame.SRCALPHA)
-
-    # Draw arrow shape
-    center = arrow_size // 2
-    if direction == "left":
-        arrow_text = "<"
-    else:  # right
-        arrow_text = '>'
-    if is_hovered and enabled:
-        glow_font = pygame.font.SysFont(None, arrow_size + 10)
-        glow_surf = glow_font.render(arrow_text, True, (*BASE_GLOW, alpha // 2))
-        glow_rect = glow_surf.get_rect(center=(center, center))
-        arrow_surf.blit(glow_surf, glow_rect)
-
-    # Draw main arrow
-    main_font = pygame.font.SysFont(None, arrow_size)
-    main_surf = main_font.render(arrow_text, True, (*color, alpha))
-    main_rect = main_surf.get_rect(center=(center, center))
-    arrow_surf.blit(main_surf, main_rect)
-
-    # Position on screen
-    final_rect = arrow_surf.get_rect(center=(x, y))
-    screen.blit(arrow_surf, final_rect)
-
-    return final_rect
-
-
-def draw_back_button(x, y, is_hovered=False):
-    """Draw the back button"""
-    color = HOVER_COLOR if is_hovered else TEXT_COLOR
-    glow_strength = 6 if is_hovered else 3
-    text_surf = render_glow_text("Back", font_button, color, BASE_GLOW, glow_strength)
-    rect = text_surf.get_rect(topleft=(x, y))
-    screen.blit(text_surf, rect)
-    return rect
-
-def song_select():
-    global running
-    songs = scan_songs()
-    current_index = 0  # Currently focused song in center
-    time_elapsed = 0
-    hovered_left_arrow = False
-    hovered_right_arrow = False
-    hovered_back = False
+    slider_width = int(panel_w * 0.55)
+    music_slider = Slider(panel_x + 220, panel_y + 140, slider_width,
+                          pygame.mixer.music.get_volume() if pygame.mixer.music.get_busy() else 0.1)
+    sfx_slider = Slider(panel_x + 220, panel_y + 240, slider_width, hover_sound.get_volume() if hover_sound else 0.5)
 
     while running:
-        dt = clock.tick(fps) / 1000.0
-        time_elapsed += dt
+        dt = clock.tick(60)
+        screen.blit(blurred, (0, 0))
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((5, 5, 10, 160))
+        screen.blit(overlay, (0, 0))
 
-        # Background
-        if background_img:
-            screen.blit(background_img, (0, 0))
-        else:
-            screen.fill(BG_COLOR)
-
-        # Animated glow effect
-        pulse = (math.sin(time_elapsed * 2.5) + 1) / 2
-        glow_intensity = (
-            int(BASE_GLOW[0] * (0.5 + 0.5 * pulse)),
-            int(BASE_GLOW[1] * (0.7 + 0.3 * pulse)),
-            int(BASE_GLOW[2])
-        )
+        # Draw panel gradient
+        for i in range(panel_h):
+            t = i / panel_h
+            r = int(20 + 30 * t)
+            g = int(20 + 30 * t)
+            b = int(30 + 20 * t)
+            panel.fill((r, g, b, 220), rect=pygame.Rect(0, i, panel_w, 1))
+        pygame.draw.rect(panel, (255, 255, 255, 12), (0, 0, panel_w, panel_h), border_radius=16)
 
         # Title
-        title_surf = render_glow_text('idk', font_title, TEXT_COLOR, glow_intensity, 8)
-        title_rect = title_surf.get_rect(center=(WIDTH / 2, 80))
-        screen.blit(title_surf, title_rect)
+        func.draw_double_text(screen,"SETTINGS", title_font, title_font, TEXT_COLOR, BLACK, (panel_w // 2, 60))
 
-        # Get mouse position
-        mx, my = pygame.mouse.get_pos()
+        # Labels
+        func.draw_double_text(screen,"MUSIC", title_font, title_font, TEXT_COLOR, BLACK, (100, 135))
+        func.draw_double_text(screen,"SFX", title_font, title_font, TEXT_COLOR, BLACK, (100, 235), center=False)
 
-        # Reset hover states
-        hovered_left_arrow = False
-        hovered_right_arrow = False
-        hovered_back = False
+        # Sliders
+        music_slider.draw(screen)
+        sfx_slider.draw(screen)
 
-        # Carousel layout parameters
-        center_x = WIDTH // 2
-        center_y = HEIGHT // 2 - 50
-        card_width = 300
-        card_height = 300
-        side_card_width = 200
-        side_card_height = 200
-        spacing = 250
+        # Back button
+        back_rect = pygame.Rect(panel_w // 2 - 100, panel_h - 90, 200, 56)
+        pygame.draw.rect(panel, (70, 160, 255), back_rect, border_radius=12)
+        func.draw_double_text(screen,"BACK", label_font, label_font, TEXT_COLOR, BLACK, (panel_w // 2, panel_h - 90 + 28))
 
-        # Draw carousel cards
-        visible_range = 2  # Show 2 cards on each side of center
-        song_rects = []
+        screen.blit(panel, (panel_x, panel_y))
 
-        for i in range(-visible_range, visible_range + 1):
-            song_index = (current_index + i) % len(songs)
-            song = songs[song_index]
-
-            offset_x = i * spacing
-            x = center_x + offset_x
-            y = center_y
-
-            # Center card is largest and most prominent
-            is_center = (i == 0)
-            if is_center:
-                scale = 1.0
-                alpha = 255
-                width, height = card_width, card_height
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            elif e.type == pygame.VIDEORESIZE:
+                WIDTH, HEIGHT = e.w, e.h
+                screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
             else:
-                distance = abs(i)
-                scale = max(0.6, 1.0 - (distance * 0.1))
-                alpha = 80
-                width, height = side_card_width, side_card_height
-
-            if -width < x < WIDTH + width:
-                card_rect = draw_carousel_card(song, x, y, width, height, scale, is_center, alpha)
-                if is_center:
-                    song_rects.append((card_rect, song_index))
-
-        # Navigation arrows
-        left_arrow_x = 80
-        right_arrow_x = WIDTH - 80
-        arrow_y = center_y
-
-        left_arrow_enabled = len(songs) > 1
-        right_arrow_enabled = len(songs) > 1
-
-        left_arrow_rect = draw_navigation_arrow(left_arrow_x, arrow_y, "left", hovered_left_arrow, left_arrow_enabled)
-        right_arrow_rect = draw_navigation_arrow(right_arrow_x, arrow_y, "right", hovered_right_arrow,
-                                                 right_arrow_enabled)
-
-        # Check arrow hovers
-        if left_arrow_rect.collidepoint(mx, my) and left_arrow_enabled:
-            hovered_left_arrow = True
-            draw_navigation_arrow(left_arrow_x, arrow_y, "left", hovered_left_arrow, left_arrow_enabled)
-
-        if right_arrow_rect.collidepoint(mx, my) and right_arrow_enabled:
-            hovered_right_arrow = True
-            draw_navigation_arrow(right_arrow_x, arrow_y, "right", hovered_right_arrow, right_arrow_enabled)
-
-        current_song = songs[current_index]
-        info_y = HEIGHT - 120
-
-        info_panel = pygame.Surface((WIDTH, 100), pygame.SRCALPHA)
-        info_panel.fill((0, 0, 0, 200))
-        screen.blit(info_panel, (0, info_y))
-
-        # Song details
-        title_text = current_song.name
-        title_surf = font_song.render(title_text, True, SELECTED_COLOR)
-        title_rect = title_surf.get_rect(center=(WIDTH / 2, info_y + 30))
-        screen.blit(title_surf, title_rect)
-
-        details_text = f"BPM: {current_song.bpm} | Difficulty: {current_song.difficulty}"
-        details_surf = font_info.render(details_text, True, TEXT_COLOR)
-        details_rect = details_surf.get_rect(center=(WIDTH / 2, info_y + 65))
-        screen.blit(details_surf, details_rect)
-
-        back_rect = draw_back_button(30, HEIGHT - 60, hovered_back)
-        if back_rect.collidepoint(mx, my):
-            hovered_back = True
-            draw_back_button(30, HEIGHT - 60, hovered_back)
-
-        # Event handling
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    return None
-                elif event.key == pygame.K_LEFT:
-                    if len(songs) > 1:
-                        current_index = (current_index - 1) % len(songs)
-                        if hover_sound:
-                            hover_sound.play()
-                elif event.key == pygame.K_RIGHT:
-                    if len(songs) > 1:
-                        current_index = (current_index + 1) % len(songs)
-                        if hover_sound:
-                            hover_sound.play()
-                elif event.key == pygame.K_RETURN:
-                    return songs[current_index]
-
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    if back_rect.collidepoint(event.pos):
+                music_slider.handle_event(e)
+                sfx_slider.handle_event(e)
+                if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                    mx, my = e.pos
+                    back_screen_rect = pygame.Rect(panel_x + back_rect.x, panel_y + back_rect.y, back_rect.w,
+                                                   back_rect.h)
+                    if back_screen_rect.collidepoint(mx, my):
                         main_menu()
 
-                    # Check navigation arrows
-                    if left_arrow_rect.collidepoint(event.pos) and left_arrow_enabled:
-                        current_index = (current_index - 1) % len(songs)
-                        if hover_sound:
-                            hover_sound.play()
-                    elif right_arrow_rect.collidepoint(event.pos) and right_arrow_enabled:
-                        current_index = (current_index + 1) % len(songs)
-                        if hover_sound:
-                            hover_sound.play()
+        pygame.mixer.music.set_volume(music_slider.value)
+        if hover_sound: hover_sound.set_volume(sfx_slider.value)
+        pygame.display.flip()
 
-                    # Check center card (click to select)
-                    elif song_rects:
-                        center_rect, song_idx = song_rects[0]
-                        if center_rect.collidepoint(event.pos):
-                            return songs[current_index]
+def start_preview(song_file):
+    pygame.mixer.music.load(song_file)
+    pygame.mixer.music.set_volume(0.06)
+    pygame.mixer.music.play(-1 ,settings['Preview_start'])
+
+# --- Song selection scene---
+def song_selection_screen():
+    global WIDTH, HEIGHT, screen, running
+    cover_rotation = 0
+    while running:
+        screen.fill(BG_COLOR)
+        cover_rotation += 0.001
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT: pygame.quit(); sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                mx, my = event.pos
+                if cover_rect.collidepoint(mx, my):
+                    print('k')
+
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    main_menu()
+
+            if event.type == pygame.MOUSEWHEEL:
+                scroll_offset -= event.y * 4
+
+            if event.type == pygame.VIDEORESIZE:
+                screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
+                global HEIGHT, WIDTH
+                WIDTH, HEIGHT = screen.get_size()
+
+        img = pygame.image.load(song_player.cover).convert_alpha()
+        cover_art = pygame.transform.scale(img, (HEIGHT*3.5 // 7, HEIGHT*3.5 // 7))
+        cover_art = pygame.transform.rotate(cover_art, 6 + 3*math.sin(cover_rotation))
+        cover_rect = cover_art.get_rect(midbottom=(WIDTH//3, HEIGHT*3//4))
+        screen.blit(cover_art, cover_rect)
+
+        img = pygame.image.load(song_player.cover).convert_alpha()
+        selectart = pygame.transform.scale(img, (80, 80))
+        selectart_rect = selectart.get_rect(topleft=(WIDTH-300,200))
+
+        screen.blit(selectart, selectart_rect)
+
+        pygame.draw.polygon(screen, pygame.Color('Purple'), ((WIDTH-300, 200),
+                                    (WIDTH-400, 200), (WIDTH-450, 280), (WIDTH-350, 280)))
+        pygame.draw.polygon(screen, pygame.Color('White'), ((WIDTH, 200),
+                                    (WIDTH - 220, 200), (WIDTH - 270, 280),(WIDTH, 280)))
+        diff_text = font_text_big.render(str(settings['Difficulty']), True, pygame.Color('White'))
+        diff_rect = diff_text.get_rect(center=(WIDTH - 380, 240))
+        screen.blit(diff_text, diff_rect)
+
+        func.draw_trapezoid(screen, pygame.Color('White'), 200, HEIGHT-160, 400, 40, -20)
+        func.draw_trapezoid(screen, pygame.Color('White'), 200, HEIGHT-120, 420, 40, 20)
+        func.draw_trapezoid(screen, pygame.Color('Gray'), 0, HEIGHT-160, 380, 40, -20)
+        func.draw_trapezoid(screen, pygame.Color('Gray'), 0, HEIGHT-120, 400, 40, 20)
+        func.draw_trapezoid(screen, pygame.Color('Pink'), 0, HEIGHT-160, 260, 40, -20)
+        func.draw_trapezoid(screen, pygame.Color('Pink'), 0, HEIGHT-120, 280, 40, 20)
+        func.draw_trapezoid(screen, pygame.Color('Red'), 0, HEIGHT-160, 180, 40, -20)
+        func.draw_trapezoid(screen, pygame.Color('Red'), 0, HEIGHT-120, 200, 40, 20)
+
+        func.draw_double_text(screen, 'SONG SELECT', font_menu, font_under_menu,
+                            pygame.Color('White'), pygame.Color('Black'), (270,50), center=False)
+
+        text = font_text_big.render(song_player.song, True, pygame.Color('White'))
+        text_rect = text.get_rect(midleft=(40,120))
+        screen.blit(text, text_rect)
+
+        text = font_text.render(settings['Artist'], True, pygame.Color('White'))
+        text_rect = text.get_rect(midleft=(40, 160))
+        screen.blit(text, text_rect)
+
+        text = font_text.render(f'BPM: {settings['Bpm']}', True, pygame.Color('White'))
+        text_rect = text.get_rect(midleft=(40, 200))
+        screen.blit(text, text_rect)
 
         pygame.display.flip()
-    return None
+
+# --- Main Menu scene ---
+def main_menu():
+    global WIDTH, HEIGHT, screen, background_img, black_overlay, running
+    buttons = ["PLAY", "SETTINGS", "CREDITS", "EXIT"]
+    hovered = -1
+    fading = False
+    fade_alpha = 0
+    old_bg = background_img.copy() if background_img else None
+    new_bg = None
+    hover_last = -1
+
+    parallax_offsets = [0, 0.0, 0.0]  # layers
+    parallax_speeds = [0.02, 0.05, 0.08]  # speed
+
+    while running:
+        dt = clock.tick(60)
+        mx, my = pygame.mouse.get_pos()
+
+        # If nothing playing, load a new main-menu random track (only when not in a fade to avoid flicker)
+        if not pygame.mixer.music.get_busy() and not fading:
+            fading = True;
+            fade_alpha = 0
+            old_bg = background_img.copy() if background_img else None
+            load_song_and_background()
+            new_bg = background_img.copy() if background_img else None
+
+        if fading and old_bg and new_bg:
+            fade_alpha += 5
+            if fade_alpha >= 255:
+                fade_alpha = 255;
+                fading = False;
+                old_bg = None;
+                background_img = new_bg;
+                new_bg = None
+            if old_bg:
+                t_old = pygame.transform.scale(old_bg, (WIDTH, HEIGHT)).copy()
+                t_old.set_alpha(255 - fade_alpha)
+                screen.blit(t_old, (0, 0))
+            if new_bg:
+                t_new = pygame.transform.scale(new_bg, (WIDTH, HEIGHT)).copy()
+                t_new.set_alpha(fade_alpha)
+                screen.blit(t_new, (0, 0))
+        else:
+            if background_img:
+                screen.blit(pygame.transform.scale(background_img, (WIDTH, HEIGHT)), (0, 0))
+            else:
+                screen.fill(BG_COLOR)
+
+        screen.fill(BLACK)
+        # Parallax type shid
+        if background_img:
+            offset_x = int((mx - WIDTH // 2) * -0.02)
+            offset_y = int((my - HEIGHT // 2) * -0.02)
+            bg_scaled = pygame.transform.scale(background_img, (WIDTH*1.1, HEIGHT*1.1))
+            bg_scaled_rect = bg_scaled.get_rect(center=(WIDTH//2 + offset_x, HEIGHT//2 + offset_y))
+            screen.blit(bg_scaled, bg_scaled_rect)
+
+        if black_overlay.get_size() != (WIDTH, HEIGHT):
+            black_overlay = pygame.Surface((WIDTH, HEIGHT))
+            black_overlay.fill(BLACK)
+            black_overlay.set_alpha(black_opacity)
+        screen.blit(black_overlay, (0, 0))
+        draw_title()
+        y_start = int(HEIGHT//2 - 100)
+        spacing = int(120 * get_scale())
+        rects = []
+        hovered = -1
+        for i, txt in enumerate(buttons):
+            y = y_start + i * spacing
+            rect = draw_menu_button(txt, y, False)
+            if rect.collidepoint(mx, my):
+                rect = draw_menu_button(txt, y, True)
+                hovered = i
+            rects.append(rect)
+
+        draw_cinematic_bars()
+        draw_visualizer(audio_data, sample_rate)
+
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                running = False
+            elif e.type == pygame.VIDEORESIZE:
+                WIDTH, HEIGHT = e.w, e.h
+                screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+                update_fonts()
+            elif e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                if hovered == 0:
+                    song_selection_screen()
+                elif hovered == 1:
+                    settings_scene()
+                elif hovered == 2:
+                    print("Credits Scene")
+                elif hovered == 3:
+                    running = False
+
+        pygame.display.flip()
 
 running = True
-song_select()
+main_menu()

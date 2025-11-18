@@ -4,7 +4,7 @@ import pygame
 WIDTH, HEIGHT = 1080 , 720
 JUDGE_LINE = HEIGHT - 100
 fps = 60
-speed = 21
+speed = 18
 songoffset = 0
 bpm = 185
 now = 0
@@ -29,12 +29,20 @@ KEYS = {
     pygame.K_k : LANE[4],
 }
 
+# --- Colors ---
 judgecolor = {
     'MARVELOUS': pygame.Color('White'),
     'PERFECT': pygame.Color('Orange'),
     'GREAT': pygame.Color('Pink'),
     'GOOD': pygame.Color('Green'),
     'MISS': pygame.Color('Red'),
+}
+
+diffcolor = {
+    'Easy': pygame.Color('Blue'),
+    'Adv': pygame.Color('Yellow'),
+    'Exp': pygame.Color('Red'),
+    'Mas': pygame.Color('Purple'),
 }
 
 # --- Folders ---
