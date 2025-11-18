@@ -290,7 +290,7 @@ def song_selection_screen():
                     main_menu()
 
             if event.type == pygame.MOUSEWHEEL:
-                scroll_offset -= event.y * 4
+                scroll_offset -= event.y * 5
 
             if event.type == pygame.VIDEORESIZE:
                 screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
