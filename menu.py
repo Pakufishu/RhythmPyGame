@@ -8,11 +8,11 @@ import dir
 import function as func
 import json
 import math
+from variables import *
 
 pygame.init()
 
 # --- Screen settings ---
-WIDTH, HEIGHT = 1080, 720
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("Rhythm Game Menu")
 clock = pygame.time.Clock()
@@ -26,6 +26,8 @@ TEXT_COLOR = (220, 240, 255)
 BLACK = (0, 0, 0)
 HOVER_COLOR = (255, 255, 0)
 BG_COLOR = (10, 10, 20)
+BG_COLOR2 = (20, 22, 28)
+
 ARROW_COLOR = (255, 255, 255)
 
 # --- Asset folders dict ---
@@ -35,13 +37,22 @@ songsdict = dir.getsongdict()
 class SongPlayer:
     def __init__(self):
         self.song = 'Mesmerizer'
-        self.songplaytrack = []
+        self.prevsong = self.song
         self.songdic = songsdict[self.song]
         self.music = songsdict[self.song]['Music']
         self.cover = songsdict[self.song]['Art']
 
-    def play(self):
-        pass
+    def play(self,chosen_song):
+        self.song = songsdict[chosen_song]['name']
+        if self.song != self.prevsong:
+            pygame.mixer.music.stop()
+            self.songdic = songsdict[self.song]
+            self.music = songsdict[self.song]['Music']
+            self.cover = songsdict[self.song]['Art']
+            pygame.mixer.music.load(self.music)
+            pygame.mixer.music.set_volume(0.1)
+            pygame.mixer.music.play(-1)
+            self.prevsong = self.song
 
     def randomSong(self):
         self.song = random.choice(list(songsdict.keys()))
@@ -106,13 +117,14 @@ def get_scale():
     return min(WIDTH / BASE_WIDTH, HEIGHT / BASE_HEIGHT)
 
 def update_fonts():
-    global font_title, font_menu, font_under_title, font_under_menu, font_text, font_text_big
+    global font_title, font_menu, font_under_title, font_under_menu, font_text, font_text_small, font_text_big
     scale = get_scale()
     font_title = pygame.font.Font(os.path.join("fonts", "Platinum_over.ttf"), int(70 * scale))
     font_under_title = pygame.font.Font(os.path.join("fonts", "Platinum_under.ttf"), int(70 * scale))
     font_menu = pygame.font.Font(os.path.join("fonts", "Platinum_over.ttf"), int(50 * scale))
     font_under_menu = pygame.font.Font(os.path.join("fonts", "Platinum_under.ttf"), int(50 * scale))
     font_text = pygame.font.Font(os.path.join("fonts", "Designer.otf"), int(30 * scale))
+    font_text_small = pygame.font.Font(os.path.join("fonts", "Designer.otf"), int(20 * scale))
     font_text_big = pygame.font.Font(os.path.join("fonts", "Designer.otf"), int(50 * scale))
 
 update_fonts()
@@ -163,61 +175,76 @@ def draw_cinematic_bars():
 
 # --- Slider class (unchanged) ---
 class Slider:
-    def __init__(self, x, y, width, value=0.5):
-        self.x, self.y, self.width, self.value = int(x), int(y), int(width), float(value)
-        self.height, self.handle_radius = 8, 12
+    def init(self, x, y, width, value=0.5):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.value = value
+        self.height = 20
         self.dragging = False
 
-    def draw(self, surf):
-        pygame.draw.rect(surf, (140, 140, 160), (self.x, self.y - self.height // 2, self.width, self.height),
-                         border_radius=4)
-        pygame.draw.rect(surf, (60, 200, 255),
-                         (self.x, self.y - self.height // 2, int(self.width * self.value), self.height),
-                         border_radius=4)
-        hx = self.x + int(self.value * self.width)
-        pygame.draw.circle(surf, (250, 250, 250), (hx, self.y), self.handle_radius)
-        pygame.draw.circle(surf, (100, 100, 120), (hx, self.y), self.handle_radius, 3)
+    def draw(self, surface, offset=(0, 0)):
+        ox, oy = offset
+        pygame.draw.rect(surface, (100, 100, 100), (self.x + ox, self.y + oy, self.width, self.height), border_radius=8)
+        knob_x = int(self.x + ox + self.value * self.width)
+        knob_y = self.y + oy + self.height // 2
+        pygame.draw.circle(surface, (255, 255, 255), (knob_x, knob_y), self.height // 2)
 
-    def handle_event(self, event):
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            mx, my = event.pos
-            hx = self.x + int(self.value * self.width)
-            if (mx - hx) ** 2 + (my - self.y) ** 2 <= self.handle_radius ** 2: self.dragging = True
-        elif event.type == pygame.MOUSEBUTTONUP:
+    def handle_event(self, event, offset=(0, 0)):
+        ox, oy = offset
+        mx, my = pygame.mouse.get_pos()
+        mx -= ox
+        my -= oy
+
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.x <= mx <= self.x + self.width and self.y <= my <= self.y + self.height:
+                self.dragging = True
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self.dragging = False
-        elif event.type == pygame.MOUSEMOTION and self.dragging:
-            mx = event.pos[0]
-            self.value = max(0.0, min(1.0, (mx - self.x) / self.width))
+        elif event.type == pygame.MOUSEMOTION:
+            if self.dragging:
+                self.value = max(0, min(1, (mx - self.x) / self.width))
 
 # --- Settings scene ---
 def settings_scene():
     global WIDTH, HEIGHT, screen, hover_sound, running
+
     snapshot = screen.copy()
     blurred = func.blur_surface(snapshot, passes=3, scale_factor=0.25)
+
     panel_w = int(WIDTH * 0.5)
     panel_h = int(HEIGHT * 0.68)
     panel_x = (WIDTH - panel_w) // 2
     panel_y = (HEIGHT - panel_h) // 2
 
     panel = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
-
     panel_scale = panel_w / BASE_WIDTH
+
+    # Fonts
     title_font = pygame.font.Font(os.path.join("fonts", "Platinum_over.ttf"), int(72 * panel_scale))
     label_font = pygame.font.Font(os.path.join("fonts", "Platinum_over.ttf"), int(40 * panel_scale))
 
-    slider_width = int(panel_w * 0.55)
-    music_slider = Slider(panel_x + 220, panel_y + 140, slider_width,
-                          pygame.mixer.music.get_volume() if pygame.mixer.music.get_busy() else 0.1)
-    sfx_slider = Slider(panel_x + 220, panel_y + 240, slider_width, hover_sound.get_volume() if hover_sound else 0.5)
+    # Slider positions relative to panel
+    label_x = 90
+    slider_x = 170
+    slider_width = panel_w - slider_x - 50
+
+    music_slider = Slider(slider_x, 128, slider_width, pygame.mixer.music.get_volume() if pygame.mixer.music.get_busy() else 0.1)
+    sfx_slider = Slider(slider_x, 228, slider_width, hover_sound.get_volume() if hover_sound else 0.5)
+
+    back_rect = pygame.Rect(panel_w // 2 - 100, panel_h - 90, 200, 56)
 
     while running:
         dt = clock.tick(60)
         screen.blit(blurred, (0, 0))
+
+        # Dark overlay
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         overlay.fill((5, 5, 10, 160))
         screen.blit(overlay, (0, 0))
 
         # Draw panel gradient
+        panel.fill((0, 0, 0, 0))
         for i in range(panel_h):
             t = i / panel_h
             r = int(20 + 30 * t)
@@ -227,42 +254,22 @@ def settings_scene():
         pygame.draw.rect(panel, (255, 255, 255, 12), (0, 0, panel_w, panel_h), border_radius=16)
 
         # Title
-        func.draw_double_text(screen,"SETTINGS", title_font, title_font, TEXT_COLOR, BLACK, (panel_w // 2, 60))
+        func.draw_double_text(panel, "SETTINGS", title_font, title_font, TEXT_COLOR, BLACK, (panel_w // 2, 60))
 
         # Labels
-        func.draw_double_text(screen,"MUSIC", title_font, title_font, TEXT_COLOR, BLACK, (100, 135))
-        func.draw_double_text(screen,"SFX", title_font, title_font, TEXT_COLOR, BLACK, (100, 235), center=False)
+        func.draw_double_text(panel, "MUSIC", label_font, label_font, TEXT_COLOR, BLACK, (label_x, 140), center=False)
+        func.draw_double_text(panel, "SFX", label_font, label_font, TEXT_COLOR, BLACK, (label_x, 240), center=False)
 
-        # Sliders
-        music_slider.draw(screen)
-        sfx_slider.draw(screen)
+        # Draw sliders on panel
+        music_slider.draw(panel)
+        sfx_slider.draw(panel)
 
         # Back button
-        back_rect = pygame.Rect(panel_w // 2 - 100, panel_h - 90, 200, 56)
         pygame.draw.rect(panel, (70, 160, 255), back_rect, border_radius=12)
-        func.draw_double_text(screen,"BACK", label_font, label_font, TEXT_COLOR, BLACK, (panel_w // 2, panel_h - 90 + 28))
+        func.draw_double_text(panel, "BACK", label_font, label_font, TEXT_COLOR, BLACK, back_rect.center)
 
+        # Blit panel to screen
         screen.blit(panel, (panel_x, panel_y))
-
-        for e in pygame.event.get():
-            if e.type == pygame.QUIT:
-                pygame.quit(); sys.exit()
-            elif e.type == pygame.VIDEORESIZE:
-                WIDTH, HEIGHT = e.w, e.h
-                screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
-            else:
-                music_slider.handle_event(e)
-                sfx_slider.handle_event(e)
-                if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
-                    mx, my = e.pos
-                    back_screen_rect = pygame.Rect(panel_x + back_rect.x, panel_y + back_rect.y, back_rect.w,
-                                                   back_rect.h)
-                    if back_screen_rect.collidepoint(mx, my):
-                        main_menu()
-
-        pygame.mixer.music.set_volume(music_slider.value)
-        if hover_sound: hover_sound.set_volume(sfx_slider.value)
-        pygame.display.flip()
 
 def start_preview(song_file):
     pygame.mixer.music.load(song_file)
@@ -273,67 +280,131 @@ def start_preview(song_file):
 def song_selection_screen():
     global WIDTH, HEIGHT, screen, running
     scroll_offset = 0
+    scroll_vel = 0
     cover_rotation = 0
+    item_height = 200
+    visible_items = HEIGHT // item_height + 5
+    items = [song for song in songsdict.keys()]
+    current_diff = 'Mas'
+
     while running:
         screen.fill(BG_COLOR)
-        cover_rotation += 0.001
+        cover_rotation += 0.002
+        diff_color = diffcolor[current_diff]
+        scroll_offset += round(scroll_vel)
+        if scroll_vel > 0: scroll_vel -= 15
+        if scroll_vel < 0: scroll_vel = 0
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT: pygame.quit(); sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
+                diff_collider = {'Ez':ez_rect, 'Adv':adv_rect, 'Exp':exp_rect, 'Mas':mas_rect}
+                for key, diffrect in diff_collider.items():
+                    if diffrect.collidepoint(mx, my):
+                        current_diff = key
+
                 if cover_rect.collidepoint(mx, my):
-                    print('Enter Play')
+                    try:
+                        print(f'Enter Play {songsdict[song_player.song][current_diff]}')
+                    except: print('locked')
 
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     main_menu()
 
             if event.type == pygame.MOUSEWHEEL:
-                scroll_offset -= event.y * 5
+                scroll_vel -= event.y * 10
 
             if event.type == pygame.VIDEORESIZE:
                 screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
-                global HEIGHT, WIDTH
                 WIDTH, HEIGHT = screen.get_size()
 
-        for song in songsdict:
-            with open(songsdict[song]['settings'], 'r') as f:
-                settings = json.load(f)
-            y = settings['ID'] * 200 - scroll_offset
-            img = pygame.image.load(songsdict[song]['Art']).convert_alpha()
-            selectart = pygame.transform.scale(img, (80, 80))
-            selectart_rect = selectart.get_rect(topleft=(WIDTH - 300, 200 + y))
-            screen.blit(selectart, selectart_rect)
-            pygame.draw.polygon(screen, pygame.Color('Purple'), ((WIDTH - 300, 200 + y),
-                            (WIDTH - 400, 200 + y), (WIDTH - 450, 280 + y),(WIDTH - 350, 280 + y)))
-            pygame.draw.polygon(screen, pygame.Color('White'), ((WIDTH, 200 + y),
-                            (WIDTH - 220, 200 + y), (WIDTH - 270, 280 + y), (WIDTH, 280 + y)))
+        total_height = len(items) * item_height
+        scroll_offset = scroll_offset % total_height
 
-            diff_text = font_text_big.render(str(settings['Difficulty']), True, pygame.Color('White'))
-            diff_rect = diff_text.get_rect(center=(WIDTH - 380, 240 + y))
-            screen.blit(diff_text, diff_rect)
+        for i in range(-1, visible_items + 1):
+            list_index = (int(scroll_offset // item_height) + i) % len(items)
+            x = 0
+            base_y = i * item_height - (scroll_offset % item_height)
+            y = base_y + 200  # Center the list vertically
+            selected_index = int(scroll_offset // item_height) % len(items)
 
+            if -item_height - 500 < y < HEIGHT + 200:
+                with open(songsdict[items[list_index]]['settings'], 'r') as f:
+                    settings = json.load(f)
+                if list_index == selected_index:
+                    playing_song = items[list_index]
+                    song_player.play(playing_song)
+                    x -= 50
+                song = items[list_index]
+                img = pygame.image.load(songsdict[song]['Art']).convert_alpha()
+                selectart = pygame.transform.scale(img, (80, 80))
+                selectart_rect = selectart.get_rect(topleft=(WIDTH - 300 + x, 0 + y))
+                screen.blit(selectart, selectart_rect)
+
+                pygame.draw.polygon(screen, diff_color, ((WIDTH - 300 + x, 0 + y),
+                                (WIDTH - 400 + x, 0 + y), (WIDTH - 450 + x, 80 + y),(WIDTH - 350 + x, 80 + y)))
+                pygame.draw.polygon(screen, pygame.Color('White'), ((WIDTH, 0 + y),
+                                (WIDTH - 220 + x, 0 + y), (WIDTH - 270, 80 + y), (WIDTH, 80 + y)))
+                pygame.draw.polygon(screen, pygame.Color('White'), ((WIDTH - 300, 0 + y),
+                                (WIDTH - 220 + x, 0 + y), (WIDTH - 270, 80 + y), (WIDTH, 80 + y)))
+                pygame.draw.polygon(screen, pygame.Color('Gray'), ((WIDTH, 80 + y),
+                                (WIDTH - 450 + x, 80 + y), (WIDTH - 270 + x, 120 + y),(WIDTH, 120 + y)))
+
+                song_text = font_text.render(songsdict[song]['name'], True, BLACK)
+                song_rect = song_text.get_rect(midleft=(WIDTH - 200 + x, 60 + y))
+                screen.blit(song_text, song_rect)
+
+                diff_text = font_text_big.render(str(settings['Difficulty']), True, pygame.Color('White'))
+                diff_rect = diff_text.get_rect(center=(WIDTH - 380 + x, 40 + y))
+                screen.blit(diff_text, diff_rect)
+
+        with open(songsdict[song_player.song]['settings'], 'r') as f:
+            settings = json.load(f)
         # --- UI (Difficulty Selection, Cover art) ---
         img = pygame.image.load(song_player.cover).convert_alpha()
         cover_art = pygame.transform.scale(img, (HEIGHT*3.5 // 7, HEIGHT*3.5 // 7))
         cover_art = pygame.transform.rotate(cover_art, 6 + 3*math.sin(cover_rotation))
-        cover_rect = cover_art.get_rect(midbottom=(WIDTH//3, HEIGHT*3//4))
+        cover_rect = cover_art.get_rect(center=(WIDTH//3, HEIGHT*3//7))
+        pygame.draw.rect(screen, diff_color, cover_rect.inflate(-40, -40))
         screen.blit(cover_art, cover_rect)
 
-        func.draw_trapezoid(screen, pygame.Color('White'), 200, HEIGHT-160, 400, 40, -20)
-        func.draw_trapezoid(screen, pygame.Color('White'), 200, HEIGHT-120, 420, 40, 20)
-        func.draw_trapezoid(screen, pygame.Color('Gray'), 0, HEIGHT-160, 380, 40, -20)
-        func.draw_trapezoid(screen, pygame.Color('Gray'), 0, HEIGHT-120, 400, 40, 20)
-        func.draw_trapezoid(screen, pygame.Color('Pink'), 0, HEIGHT-160, 260, 40, -20)
-        func.draw_trapezoid(screen, pygame.Color('Pink'), 0, HEIGHT-120, 280, 40, 20)
-        func.draw_trapezoid(screen, pygame.Color('Red'), 0, HEIGHT-160, 180, 40, -20)
-        func.draw_trapezoid(screen, pygame.Color('Red'), 0, HEIGHT-120, 200, 40, 20)
+        func.draw_trapezoid(screen, pygame.Color(BG_COLOR2), 0, HEIGHT-160, WIDTH//2, 40, -30)
+        func.draw_trapezoid(screen, pygame.Color(BG_COLOR2), 0, HEIGHT-120, WIDTH//2 + 30, 40, 30)
+
+        square_surface = pygame.Surface((75, 75), pygame.SRCALPHA)
+        pygame.draw.rect(square_surface, diffcolor['Ez'], (0, 0, 75, 75))
+        rotated_surface = pygame.transform.rotate(square_surface, 45)
+
+        ez_rect = rotated_surface.get_rect(center=(100, HEIGHT-120))
+        screen.blit(rotated_surface, ez_rect)
+
+        square_surface = pygame.Surface((75, 75), pygame.SRCALPHA)
+        pygame.draw.rect(square_surface, diffcolor['Adv'], (0, 0, 75, 75))
+        rotated_surface = pygame.transform.rotate(square_surface, 45)
+
+        adv_rect = rotated_surface.get_rect(center=(250, HEIGHT - 120))
+        screen.blit(rotated_surface, adv_rect)
+
+        square_surface = pygame.Surface((75, 75), pygame.SRCALPHA)
+        pygame.draw.rect(square_surface, diffcolor['Exp'], (0, 0, 75, 75))
+        rotated_surface = pygame.transform.rotate(square_surface, 45)
+
+        exp_rect = rotated_surface.get_rect(center=(400, HEIGHT - 120))
+        screen.blit(rotated_surface, exp_rect)
+
+        square_surface = pygame.Surface((75, 75), pygame.SRCALPHA)
+        pygame.draw.rect(square_surface, diffcolor['Mas'], (0, 0, 75, 75))
+        rotated_surface = pygame.transform.rotate(square_surface, 45)
+
+        mas_rect = rotated_surface.get_rect(center=(550, HEIGHT - 120))
+        screen.blit(rotated_surface, mas_rect)
 
         func.draw_double_text(screen, 'SONG SELECT', font_menu, font_under_menu,
                             pygame.Color('White'), pygame.Color('Black'), (270,50), center=False)
 
-        text = font_text_big.render(song_player.song, True, pygame.Color('White'))
+        text = font_text_big.render(settings['Name'], True, pygame.Color('White'))
         text_rect = text.get_rect(midleft=(40,120))
         screen.blit(text, text_rect)
 
@@ -445,4 +516,4 @@ def main_menu():
         pygame.display.flip()
 
 running = True
-main_menu()
+song_selection_screen()

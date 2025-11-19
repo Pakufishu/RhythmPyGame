@@ -39,8 +39,8 @@ judgecolor = {
 }
 
 diffcolor = {
-    'Easy': pygame.Color('Blue'),
-    'Adv': pygame.Color('Yellow'),
+    'Ez': pygame.Color(51, 204, 255),
+    'Adv': pygame.Color(255, 238, 0),
     'Exp': pygame.Color('Red'),
     'Mas': pygame.Color('Purple'),
 }
