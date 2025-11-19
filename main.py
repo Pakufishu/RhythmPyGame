@@ -3,6 +3,7 @@ import os
 import pygame
 import dir
 from variables import *
+import menu
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -18,6 +19,7 @@ while True:
         if event.type == pygame.QUIT:
             sys.exit()
 
+    menu.main_menu()
 
 
     pygame.display.update()

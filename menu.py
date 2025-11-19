@@ -485,11 +485,7 @@ def song_selection_screen():
                         current_diff = key
 
                 if cover_rect.collidepoint(mx, my):
-                    try:
-                        game.run(song, current_diff)
-                        print(f'Enter Play {songsdict[song_player.song][current_diff]}')
-                    except:
-                        print('locked')
+                    game.run(song, current_diff)
 
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
@@ -599,6 +595,7 @@ def song_selection_screen():
 
         text = font_text_big.render(settings['Name'], True, pygame.Color('White'))
         text_rect = text.get_rect(midleft=(40, 120))
+        screen.blit(text, text_rect)
         screen.blit(text, text_rect)
 
         text = font_text.render(settings['Artist'], True, pygame.Color('White'))
@@ -712,6 +709,5 @@ def main_menu():
                     running = False
 
         pygame.display.flip()
-
 running = True
-song_selection_screen()
+main_menu()
