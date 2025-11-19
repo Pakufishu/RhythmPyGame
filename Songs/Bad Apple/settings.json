@@ -2,9 +2,14 @@
   "Name": "Bad Apple!!",
   "Artist": "nomico",
   "Bpm": 138,
-  "Difficulty": 7,
+  "Difficulty": {
+    "Ez": 0,
+    "Adv":0,
+    "Exp":5,
+    "Mas":0
+  },
   "Preview_start": 1.9,
-  "offset": 1250,
+  "offset": 1686,
   "ID": 1,
   "Genre": "nico"
 }

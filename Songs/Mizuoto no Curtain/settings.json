@@ -2,9 +2,14 @@
   "Name": "Mizuoto no Curtain",
   "Artist": "MIMI",
   "Bpm": 186,
-  "Difficulty": 8,
+  "Difficulty": {
+    "Ez": 0,
+    "Adv":0,
+    "Exp":0,
+    "Mas":8
+  },
   "Preview_start": 1.9,
-  "offset": 638,
+  "offset": 1305,
   "ID": 0,
   "Genre": "nico"
 }

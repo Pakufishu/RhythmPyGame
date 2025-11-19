@@ -2,7 +2,12 @@
   "Name": "Mesmerizer",
   "Artist": "32ki",
   "Bpm": 185,
-  "Difficulty": 8,
+  "Difficulty": {
+    "Ez": 0,
+    "Adv":0,
+    "Exp":6,
+    "Mas":8
+  },
   "Preview_start": 1.9,
   "offset": 1305,
   "ID": 0,

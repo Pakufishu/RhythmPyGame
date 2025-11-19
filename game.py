@@ -4,9 +4,11 @@ from variables import *
 import function as func
 import dir
 import json
+import os
+
 
 def run(current_song, difficulty):
-    global Conductor,Music,PlayerInput,Beatline,Note,Hold,Swipe,Lane,Scoring,Interface
+    global Conductor, Music, PlayerInput, Beatline, Note, Hold, Swipe, Lane, Scoring, Interface
 
     pygame.mixer.pre_init(44100, -16, 2, 512)
     pygame.init()
@@ -24,10 +26,9 @@ def run(current_song, difficulty):
         settings = json.load(f)
 
     bpm = settings['Bpm']
-
-    combofont = pygame.font.Font('fonts/Platinum_under.ttf', 40)
-    combofontup = pygame.font.Font('fonts/Platinum_over.ttf', 40)
-
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    combofont = pygame.font.Font(os.path.join(BASE_DIR, "fonts", "Platinum_under.ttf"), 40)
+    combofontup = pygame.font.Font(os.path.join(BASE_DIR, "fonts", "Platinum_over.ttf"), 40)
     playlane_obj = pygame.Surface((400, HEIGHT), pygame.SRCALPHA, 32)
     playlane_rect = playlane_obj.get_rect(center=(LANE[3][0], HEIGHT / 2))
     playlane_obj = playlane_obj.convert_alpha()
@@ -35,10 +36,18 @@ def run(current_song, difficulty):
 
     songname_surf = combofont.render(current_song.upper(), False, 'Black')
     songname_surf_up = combofontup.render(current_song.upper(), False, 'White')
-    songname_rect = songname_surf.get_rect(topleft=(20, 20))
+    songname_surf = pygame.transform.rotate(songname_surf, 90)
+    songname_surf_up = pygame.transform.rotate(songname_surf_up, 90)
+    songname_rect = songname_surf.get_rect(bottomleft=(20, HEIGHT-20))
 
-    lane_sound = pygame.mixer.Sound('sfx/lanesound.wav')
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    lane_sound = pygame.mixer.Sound(os.path.join(BASE_DIR, 'sfx', 'lanesound.wav'))
     lane_sound.set_volume(0.1)
+
+    text_anim = {
+        'judge_scale': 1.0,  # current scale of judgment text
+        'judge_timer': 0  # frames remaining for animation
+    }
 
     class Conductor:
         def __init__(self, offset):
@@ -149,7 +158,7 @@ def run(current_song, difficulty):
     class Beatline:
         def __init__(self, y=JUDGE_LINE):
             self.bar = 0
-            self.ms_per_beat = round(60 / (bpm*4), 3) * 1000
+            self.ms_per_beat = round(60 / (bpm * 4), 3) * 1000
             self.pixel_per_beat = speed * self.ms_per_beat
             self.y = y
             self.y_first = y
@@ -169,10 +178,10 @@ def run(current_song, difficulty):
             space = self.pixel_per_beat * speed
             for i in range(40):
                 y_pos = self.y - self.pixel_per_beat * i
-                if 0 < y_pos < HEIGHT :
+                if 0 < y_pos < HEIGHT:
                     pygame.draw.line(screen, pygame.Color('Red'),
-                                 (self.lane_start, y_pos),
-                                 (self.lane_end, y_pos), 7)
+                                     (self.lane_start, y_pos),
+                                     (self.lane_end, y_pos), 7)
 
     class Note:
         def __init__(self, lane, bar, beat, x, xx):
@@ -180,7 +189,6 @@ def run(current_song, difficulty):
             self.lanestart = LANE[lane][0]
             self.laneend = LANE[lane + 1][0]
             self.pixel_per_beat = round(60 / (bpm * 4), 3) * 1000
-            print(self.pixel_per_beat)
             self.bar = bar
             self.beat = beat
             self.y = JUDGE_LINE - (speed * self.pixel_per_beat * (self.bar + (self.beat / 16)))
@@ -492,13 +500,25 @@ def run(current_song, difficulty):
         def comboing(self, judge):
             if judge != 'MISS':
                 self.combo += 1
+                Interface.score_timer = 10
             else:
-                self.maxcombo = self.combo;
+                self.maxcombo = self.combo
                 self.combo = 0
+                Interface.score_timer = 10
 
     class Interface:
         def __init__(self):
             self.lane_mid = LANE[3][0]
+            self.score_scale = 1
+            self.score_timer = 0
+
+            self.judge_text = ""
+            self.judge_color = pygame.Color('White')
+            self.judge_outline = pygame.Color('Black')
+            self.judge_scale = 1.0
+            self.judge_target_scale = 1.0
+            self.judge_timer = 0
+            self.judge_debounce = 2
 
         def display_UI(self):
             screen.blit(songname_surf, songname_rect)
@@ -506,10 +526,26 @@ def run(current_song, difficulty):
             screen.blit(playlane_obj, playlane_rect)
 
             score_text = combofont.render(str(Score.score), False, 'Black')
+            score_text = pygame.transform.scale(score_text, (int(score_text.get_width() * self.score_scale),
+                                                             int(score_text.get_height() * self.score_scale)))
             score_text_up = combofontup.render(str(Score.score), False, 'White')
+            score_text_up = pygame.transform.scale(score_text_up, (int(score_text_up.get_width() * self.score_scale),
+                                                                   int(score_text_up.get_height() * self.score_scale)))
             score_rect = score_text.get_rect(topright=(WIDTH - 20, 20))
             screen.blit(score_text, score_rect)
             screen.blit(score_text_up, score_rect)
+
+        def trigger_judge_animation(self, text, color):
+            if self.judge_debounce > 0:
+                return  # ignore new hit until debounce finishes
+
+            self.judge_text = text
+            self.judge_color = color
+            self.judge_outline = pygame.Color('Black') if text == 'MARVELOUS' else pygame.Color('White')
+            self.judge_scale = 0.8
+            self.judge_target_scale = 1
+            self.judge_timer = 15
+            self.judge_debounce = 10
 
         def display_info(self):
             if Score.combo > 3:
@@ -519,27 +555,44 @@ def run(current_song, difficulty):
                 screen.blit(combo_img, combo_rect)
                 combo_rect = combo_img.get_rect(center=(self.lane_mid, (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 + 49))
                 screen.blit(combo_img_up, combo_rect)
-                combo_img = combofont.render(f"{Score.combo}", True, (24, 24, 24))
-                combo_img_up = combofontup.render(f"{Score.combo}", True, pygame.Color('White'))
-                combo_rect = combo_img.get_rect(center=(self.lane_mid, (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2))
-                screen.blit(combo_img, combo_rect)
-                combo_rect = combo_img.get_rect(center=(self.lane_mid, (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 - 4))
-                screen.blit(combo_img_up, combo_rect)
+                combo_num_img = combofont.render(f"{Score.combo}", True, (24, 24, 24))
+                combo_num_img_up = combofontup.render(f"{Score.combo}", True, pygame.Color('White'))
+                combo_rect = combo_num_img.get_rect(center=(self.lane_mid, (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2))
+                screen.blit(combo_num_img, combo_rect)
+                combo_rect = combo_num_img.get_rect(center=(self.lane_mid, (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 - 4))
+                screen.blit(combo_num_img_up, combo_rect)
 
-            if judges:
-                judge_img = combofont.render(f"{judges[0]}", True, judgecolor[judges[0]])
-                if judges[0] == 'MARVELOUS':
-                    outline = pygame.Color('Black')
-                else:
-                    outline = pygame.Color('White')
-                judge_img_up = combofontup.render(f"{judges[0]}", True, outline)
+            if self.judge_text:
+                judge_img = combofont.render(self.judge_text, True, self.judge_color)
+                judge_img_up = combofontup.render(self.judge_text, True, self.judge_outline)
+                judge_img = pygame.transform.scale(judge_img, (
+                    int(judge_img.get_width() * self.judge_scale),
+                    int(judge_img.get_height() * self.judge_scale)
+                ))
+                judge_img_up = pygame.transform.scale(judge_img_up, (
+                    int(judge_img_up.get_width() * self.judge_scale),
+                    int(judge_img_up.get_height() * self.judge_scale)
+                ))
                 judge_rect = judge_img.get_rect(center=(self.lane_mid, HEIGHT * 1 / 3))
                 screen.blit(judge_img, judge_rect)
-                judge_rect = judge_img.get_rect(center=(self.lane_mid, HEIGHT * 1 / 3 - 4))
                 screen.blit(judge_img_up, judge_rect)
-                if len(judges) > 1:
-                    judges.remove(judges[0])
-                    Score.comboing(judges[0])
+
+            if judges:
+                text = judges.pop(0)
+                color = judgecolor[text]
+                Interface.trigger_judge_animation(text, color)
+                Score.comboing(text)
+
+            if self.judge_text:
+                judge_img = combofont.render(self.judge_text, True, self.judge_color)
+                judge_img_up = combofontup.render(self.judge_text, True, self.judge_outline)
+                judge_img = pygame.transform.scale(judge_img, (int(judge_img.get_width() * self.judge_scale),
+                                                               int(judge_img.get_height() * self.judge_scale)))
+                judge_img_up = pygame.transform.scale(judge_img_up, (int(judge_img_up.get_width() * self.judge_scale),
+                                                                     int(judge_img_up.get_height() * self.judge_scale)))
+                judge_rect = judge_img.get_rect(center=(self.lane_mid, HEIGHT * 1 / 3))
+                screen.blit(judge_img, judge_rect)
+                screen.blit(judge_img_up, judge_rect)
 
         def display_lanes(self):
             pygame.draw.line(screen, pygame.Color('Green'), (LANE[1][0], JUDGE_LINE),
@@ -547,6 +600,23 @@ def run(current_song, difficulty):
             for i in range(0, 5):
                 pygame.draw.line(screen, pygame.Color('White'), ((WIDTH / 3) + i * 100, 0),
                                  ((WIDTH / 3) + i * 100, HEIGHT), 5)
+
+        def update_score_animation(self):
+            if self.score_timer > 0:
+                self.score_scale = 1.2
+                self.score_timer -= 1
+            else:
+                self.score_scale = max(1, self.score_scale - 0.05)
+
+            if self.judge_timer > 0:
+                self.judge_scale += (self.judge_target_scale - self.judge_scale) * 0.2
+                self.judge_timer -= 1
+            else:
+                self.judge_target_scale = 1.0
+                self.judge_scale += (self.judge_target_scale - self.judge_scale) * 0.1
+
+            if self.judge_debounce > 0:
+                self.judge_debounce -= 1
 
     running = True
     notes = []
@@ -610,6 +680,8 @@ def run(current_song, difficulty):
             for note in notes:
                 note.main()
 
+        Interface.update_score_animation()
+
         Interface.display_lanes()
         Interface.display_info()
 
@@ -621,7 +693,3 @@ def run(current_song, difficulty):
             print('Song end')
 
         pygame.display.update()
-
-# run('Mizuoto no Curtain', 'Mas')
-# run('Mesmerizer', 'Exp')
-run('Bad Apple', 'Ez')

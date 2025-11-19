@@ -4,9 +4,7 @@ import pygame
 WIDTH, HEIGHT = 1080 , 720
 JUDGE_LINE = HEIGHT - 100
 fps = 60
-speed = 10
-songoffset = 0
-bpm = 185
+speed = 20
 now = 0
 swipe_cd = 0
 mx, my = 0,0

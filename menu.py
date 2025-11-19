@@ -9,6 +9,7 @@ import function as func
 import json
 import math
 from variables import *
+import game
 
 pygame.init()
 
@@ -462,7 +463,6 @@ def song_selection_screen():
     cover_rotation = 0
     item_height = 200
     visible_items = HEIGHT // item_height + 5
-    items = [song for song in songsdict.keys()]
     current_diff = 'Mas'
 
     while running:
@@ -486,6 +486,7 @@ def song_selection_screen():
 
                 if cover_rect.collidepoint(mx, my):
                     try:
+                        game.run(song, current_diff)
                         print(f'Enter Play {songsdict[song_player.song][current_diff]}')
                     except:
                         print('locked')
@@ -503,6 +504,7 @@ def song_selection_screen():
                 screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
                 WIDTH, HEIGHT = screen.get_size()
 
+        items = [song for song in songsdict.keys()]
         total_height = len(items) * item_height
         scroll_offset = scroll_offset % total_height
 
@@ -522,33 +524,31 @@ def song_selection_screen():
                     x -= 50
                 song = items[list_index]
                 img = pygame.image.load(songsdict[song]['Art']).convert_alpha()
-                selectart = pygame.transform.scale(img, (80, 80))
-                selectart_rect = selectart.get_rect(topleft=(WIDTH - 300 + x, 0 + y))
+                selectart = pygame.transform.scale(img, (105, 105))
+                selectart_rect = selectart.get_rect(topleft=(WIDTH - 325 + x, 0 + y))
                 screen.blit(selectart, selectart_rect)
 
                 pygame.draw.polygon(screen, diff_color, ((WIDTH - 300 + x, 0 + y),
-                                                         (WIDTH - 400 + x, 0 + y), (WIDTH - 450 + x, 80 + y),
-                                                         (WIDTH - 350 + x, 80 + y)))
+                                    (WIDTH - 400 + x, 0 + y), (WIDTH - 450 + x, 80 + y), (WIDTH - 350 + x, 80 + y)))
+                pygame.draw.polygon(screen, diff_color, ((WIDTH - 400 + x, 0 + y),
+                                    (WIDTH - 300 + x*2, 0 + y), (WIDTH - 350 + x, 80 + y), (WIDTH - 250 + x*2, 80 + y)))
                 pygame.draw.polygon(screen, pygame.Color('White'), ((WIDTH, 0 + y),
-                                                                    (WIDTH - 220 + x, 0 + y), (WIDTH - 270, 80 + y),
-                                                                    (WIDTH, 80 + y)))
+                                    (WIDTH - 220 + x, 0 + y), (WIDTH - 270, 80 + y), (WIDTH, 80 + y)))
                 pygame.draw.polygon(screen, pygame.Color('White'), ((WIDTH - 300, 0 + y),
-                                                                    (WIDTH - 220 + x, 0 + y), (WIDTH - 270, 80 + y),
-                                                                    (WIDTH, 80 + y)))
+                                    (WIDTH - 220 + x, 0 + y), (WIDTH - 270, 80 + y), (WIDTH, 80 + y)))
                 pygame.draw.polygon(screen, pygame.Color('Gray'), ((WIDTH, 80 + y),
-                                                                   (WIDTH - 450 + x, 80 + y),
-                                                                   (WIDTH - 270 + x, 120 + y), (WIDTH, 120 + y)))
+                                    (WIDTH - 450 + x, 80 + y), (WIDTH - 270 + x, 120 + y), (WIDTH, 120 + y)))
 
                 song_text = font_text.render(songsdict[song]['name'], True, BLACK)
                 song_rect = song_text.get_rect(midleft=(WIDTH - 200 + x, 60 + y))
                 screen.blit(song_text, song_rect)
-
-                diff_text = font_text_big.render(str(settings['Difficulty']), True, pygame.Color('White'))
+                diff_text = font_text_big.render(str(settings['Difficulty'][current_diff]), True, pygame.Color('White'))
                 diff_rect = diff_text.get_rect(center=(WIDTH - 380 + x, 40 + y))
                 screen.blit(diff_text, diff_rect)
 
         with open(songsdict[song_player.song]['settings'], 'r') as f:
             settings = json.load(f)
+
         # --- UI (Difficulty Selection, Cover art) ---
         img = pygame.image.load(song_player.cover).convert_alpha()
         cover_art = pygame.transform.scale(img, (HEIGHT * 3.5 // 7, HEIGHT * 3.5 // 7))
@@ -556,9 +556,16 @@ def song_selection_screen():
         cover_rect = cover_art.get_rect(center=(WIDTH // 3, HEIGHT * 3 // 7))
         pygame.draw.rect(screen, diff_color, cover_rect.inflate(-40, -40))
         screen.blit(cover_art, cover_rect)
-
         func.draw_trapezoid(screen, pygame.Color(BG_COLOR2), 0, HEIGHT - 160, WIDTH // 2, 40, -30)
         func.draw_trapezoid(screen, pygame.Color(BG_COLOR2), 0, HEIGHT - 120, WIDTH // 2 + 30, 40, 30)
+
+        if settings['Difficulty'][current_diff] == 0:
+            cover_art.fill((0, 0, 0, 155))
+            screen.blit(cover_art, cover_rect)
+            img = pygame.image.load('images/Lock.png').convert_alpha()
+            img = pygame.transform.scale(img, (100, 100))
+            img_rect = img.get_rect(center=(WIDTH // 3, HEIGHT * 3 // 7))
+            screen.blit(img, img_rect)
 
         square_surface = pygame.Surface((75, 75), pygame.SRCALPHA)
         pygame.draw.rect(square_surface, diffcolor['Ez'], (0, 0, 75, 75))
@@ -577,7 +584,6 @@ def song_selection_screen():
         square_surface = pygame.Surface((75, 75), pygame.SRCALPHA)
         pygame.draw.rect(square_surface, diffcolor['Exp'], (0, 0, 75, 75))
         rotated_surface = pygame.transform.rotate(square_surface, 45)
-
         exp_rect = rotated_surface.get_rect(center=(400, HEIGHT - 120))
         screen.blit(rotated_surface, exp_rect)
 
@@ -708,4 +714,4 @@ def main_menu():
         pygame.display.flip()
 
 running = True
-main_menu()
+song_selection_screen()
