@@ -4,7 +4,7 @@ import pygame
 WIDTH, HEIGHT = 1080 , 720
 JUDGE_LINE = HEIGHT - 100
 fps = 60
-speed = 18
+speed = 10
 songoffset = 0
 bpm = 185
 now = 0

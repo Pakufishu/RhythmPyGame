@@ -11,8 +11,8 @@ def getsongdict():
             songdic['name'] = name
             if f.lower().endswith(".json"):
                 songdic['settings'] = os.path.join(name_files, f)
-            if f.endswith('Easy.txt'):
-                songdic['Easy'] = os.path.join(name_files, f)
+            if f.endswith('Ez.txt'):
+                songdic['Ez'] = os.path.join(name_files, f)
             if f.endswith('Adv.txt'):
                 songdic['Adv'] =  os.path.join(name_files, f)
             if f.endswith('Exp.txt'):
