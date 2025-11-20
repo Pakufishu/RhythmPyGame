@@ -5,11 +5,11 @@
   "Difficulty": {
     "Ez": 0,
     "Adv":0,
-    "Exp":6,
-    "Mas":8
+    "Exp":10,
+    "Mas":13
   },
   "Preview_start": 1.9,
-  "offset":1325,
+  "offset": 1305,
   "ID": 0,
   "Genre": "nico"
 }

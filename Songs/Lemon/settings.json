@@ -1,0 +1,15 @@
+{
+  "Name": "Lemon",
+  "Artist": "Kenshi Yonezu",
+  "Bpm": 87,
+  "Difficulty": {
+    "Ez": 1,
+    "Adv":4,
+    "Exp":0,
+    "Mas":0
+  },
+  "Preview_start": 1.9,
+  "offset": 1305,
+  "ID": 4,
+  "Genre": "JPop"
+}

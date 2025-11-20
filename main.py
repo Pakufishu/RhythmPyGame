@@ -455,7 +455,7 @@ def credits_scene():
     back_rect = pygame.Rect(WIDTH // 2 - 100, HEIGHT - 90, 200, 56)
 
     credits_lines = [
-        "-----PYTRHYTHM GAME-----",
+        "-----------PYTRHYTHM GAME-----------",
         '',
         "-----MAIN CODERS-----",
         "6834418923 NATTHAPOOM PONGPONGSRI",
@@ -466,8 +466,11 @@ def credits_scene():
         "BAD APPLE BY NOMICO",
         "MESMERIZER BY 32KI",
         "MIZUOTO NO CURTAIN BY MIMI",
+        "LEMON BY KENSHI YONEZU",
+        "TIME FILES BY XI",
+        "UNRAVEL BY TK",
         '',
-        "THANKS FOR PLAYING!",
+        "THANK YOU FOR PLAYING!",
     ]
 
     scroll_speed = 1
@@ -522,9 +525,11 @@ def credits_scene():
 def song_selection_screen():
     global WIDTH, HEIGHT, screen, running
     scroll_offset = 0
-    scroll_vel = 0
+    scroll_vel = 400 * random.random()
     cover_rotation = 0
     item_height = 200
+    ishovered = False
+    mx, my = pygame.mouse.get_pos()
     visible_items = HEIGHT // item_height + 5
     current_diff = 'Mas'
 
@@ -541,19 +546,25 @@ def song_selection_screen():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit(); sys.exit()
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if event.type == pygame.MOUSEMOTION:
                 mx, my = event.pos
+            if cover_rect.collidepoint(mx, my):
+                ishovered = True
+            else:
+                ishovered = False
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if gamb_rect.collidepoint(mx, my):
+                    scroll_vel += random.randint(400, 1000)
                 diff_collider = {'Ez': ez_rect, 'Adv': adv_rect, 'Exp': exp_rect, 'Mas': mas_rect}
                 for key, diffrect in diff_collider.items():
                     if diffrect.collidepoint(mx, my):
                         current_diff = key
-
                 if cover_rect.collidepoint(mx, my):
-                    # try:
-                    gamerun(playing_song, current_diff)
-                    # except:
-                    #     print('Song is locked')
-                    #     pygame.mixer.music.play()
+                    try:
+                        gamerun(playing_song, current_diff)
+                    except:
+                        print('Song is locked')
+                        pygame.mixer.music.play()
 
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
@@ -626,6 +637,17 @@ def song_selection_screen():
         func.draw_trapezoid(screen, pygame.Color(BG_COLOR2), 0, HEIGHT - 160, WIDTH // 2, 40, -30)
         func.draw_trapezoid(screen, pygame.Color(BG_COLOR2), 0, HEIGHT - 120, WIDTH // 2 + 30, 40, 30)
 
+        if ishovered and settings['Difficulty'][current_diff] != 0:
+            img = pygame.image.load(song_player.cover).convert_alpha()
+            cover_art = pygame.transform.scale(img, (HEIGHT * 3.5 // 7, HEIGHT * 3.5 // 7))
+            cover_art = pygame.transform.rotate(cover_art, 6 + 3 * math.sin(cover_rotation))
+            cover_art.fill((0, 0, 0, 155))
+            cover_rect = cover_art.get_rect(center=(WIDTH // 3, HEIGHT * 3 // 7))
+            screen.blit(cover_art, cover_rect)
+
+            pygame.draw.polygon(screen, WHITE, ((WIDTH // 3-20, HEIGHT * 3 // 7 - 50),      # Top point
+                (WIDTH // 3-25, HEIGHT * 3 // 7 + 50),(WIDTH // 3 + 75, HEIGHT * 3 // 7)))
+
         if settings['Difficulty'][current_diff] == 0:
             cover_art.fill((0, 0, 0, 155))
             screen.blit(cover_art, cover_rect)
@@ -677,6 +699,15 @@ def song_selection_screen():
         mas_text = mas_diff.get_rect(center=(400, HEIGHT - 120))
         screen.blit(rotated_surface, mas_rect)
         screen.blit(mas_diff, mas_text)
+
+        square_surface = pygame.Surface((75, 75), pygame.SRCALPHA)
+        pygame.draw.rect(square_surface, (138, 87, 153), (0, 0, 75, 75))
+        rotated_surface = pygame.transform.rotate(square_surface, 45)
+        gamb_diff = font_text.render('?', True, WHITE)
+        gamb_rect = rotated_surface.get_rect(center=(WIDTH - 100, HEIGHT - 120))
+        gamb_text = mas_diff.get_rect(center=(WIDTH - 100, HEIGHT - 120))
+        screen.blit(rotated_surface, gamb_rect)
+        screen.blit(gamb_diff, gamb_text)
 
         func.draw_double_text(screen, 'SONG SELECT', font_menu, font_under_menu,
                               WHITE, BLACK, (270, 50), center=False)
@@ -793,7 +824,9 @@ def main_menu():
                     running = False
 
         pygame.display.flip()
+
 def gamerun(current_song, difficulty):
+    global LANE, JUDGE_LINE
     pygame.mixer.pre_init(44100, -16, 2, 512)
     pygame.init()
     pygame.mixer.init()
@@ -810,13 +843,10 @@ def gamerun(current_song, difficulty):
         settings = json.load(f)
 
     bpm = settings['Bpm']
+    bpm = 185
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     combofont = pygame.font.Font(os.path.join(BASE_DIR, "fonts", "Platinum_under.ttf"), 40)
     combofontup = pygame.font.Font(os.path.join(BASE_DIR, "fonts", "Platinum_over.ttf"), 40)
-    playlane_obj = pygame.Surface((400, HEIGHT), pygame.SRCALPHA, 32)
-    playlane_rect = playlane_obj.get_rect(center=(LANE[3][0], HEIGHT / 2))
-    playlane_obj = playlane_obj.convert_alpha()
-    playlane_obj.fill((0, 0, 0, 255))
 
     songname_surf = combofont.render(current_song.upper(), False, 'Black')
     songname_surf_up = combofontup.render(current_song.upper(), False, 'White')
@@ -845,7 +875,7 @@ def gamerun(current_song, difficulty):
 
         def main(self):
             self.update_music_pos()
-            self.metronome()
+            # self.metronome()
 
         def metronome(self):  # flash every quarter note
             if self.lastbeat < 4:
@@ -923,8 +953,7 @@ def gamerun(current_song, difficulty):
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_p:
-                    print(pygame.mixer.music.get_pos())
-                    Music.pause()
+                    song_selection_screen()
 
             if event.type == pygame.VIDEORESIZE:
                 screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
@@ -965,12 +994,15 @@ def gamerun(current_song, difficulty):
                     pygame.draw.line(screen, pygame.Color('Red'),
                                      (self.lane_start, y_pos),
                                      (self.lane_end, y_pos), 7)
+        def updatelane(self):
+            self.lane_start = LANE[1][0]
+            self.lane_end = LANE[5][0]
 
     class Note:
         def __init__(self, lane, bar, beat, x, xx):
             self.lane = lane
             self.lanestart = LANE[lane][0]
-            self.laneend = LANE[lane + 1][0]
+            self.laneend = LANE[lane+1][0]
             self.pixel_per_beat = round(60 / (bpm * 4), 3) * 1000
             self.bar = bar
             self.beat = beat
@@ -992,6 +1024,10 @@ def gamerun(current_song, difficulty):
             if HEIGHT > self.y > 0:
                 pygame.draw.line(screen, pygame.Color('Yellow'), (self.lanestart, self.y),
                                  (self.laneend, self.y), 30)
+
+        def update(self):
+            self.lanestart = LANE[self.lane][0]
+            self.laneend = LANE[self.lane+1][0]
 
         def hit(self):
             if not self.pressed:
@@ -1144,6 +1180,10 @@ def gamerun(current_song, difficulty):
         def swipe(self, direction):
             pass
 
+        def update(self):
+            self.lanestart = LANE[self.lane][0]
+            self.laneend = LANE[self.lane+1][0]
+
     class Swipe:
         def __init__(self, lane, bar, beat, direction, xx):
             self.lane = lane
@@ -1220,6 +1260,9 @@ def gamerun(current_song, difficulty):
 
         def release(self):
             pass
+        def update(self):
+            self.lanestart = LANE[1][0]
+            self.laneend = LANE[5][0]
 
     class Lane:
         def __init__(self, num, keystate, ispressed, waspressed):
@@ -1295,13 +1338,14 @@ def gamerun(current_song, difficulty):
         def calculateacc(self):
             self.accuracy = (self.score / (self.notecount * 310)) * 100
 
+        def senddata(self):
+            return self.difficulty, self.score, self.maxcombo, self.accuracy, self.acc
+
     class Interface:
         def __init__(self):
-            self.lane_mid = LANE[3][0]
             self.score_scale = 1
             self.score_timer = 0
             self.lastscore = 0
-
             self.judge_text = ""
             self.judge_color = WHITE
             self.judge_outline = BLACK
@@ -1311,6 +1355,10 @@ def gamerun(current_song, difficulty):
             self.judge_debounce = 2
 
         def display_UI(self):
+            playlane_obj = pygame.Surface((400, HEIGHT), pygame.SRCALPHA, 32)
+            playlane_rect = playlane_obj.get_rect(center=(((WIDTH / 3) + 200), HEIGHT / 2))
+            playlane_obj = playlane_obj.convert_alpha()
+            playlane_obj.fill((0, 0, 0, 255))
             screen.blit(songname_surf, songname_rect)
             screen.blit(songname_surf_up, songname_rect)
             screen.blit(playlane_obj, playlane_rect)
@@ -1341,15 +1389,15 @@ def gamerun(current_song, difficulty):
             if Score.combo > 3:
                 combo_img = combofont.render('COMBO', True, (24, 24, 24))
                 combo_img_up = combofontup.render('COMBO', True, WHITE)
-                combo_rect = combo_img.get_rect(center=(self.lane_mid, (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 + 53))
+                combo_rect = combo_img.get_rect(center=((WIDTH / 3) + 200, (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 + 53))
                 screen.blit(combo_img, combo_rect)
-                combo_rect = combo_img.get_rect(center=(self.lane_mid, (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 + 49))
+                combo_rect = combo_img.get_rect(center=((WIDTH / 3) + 200, (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 + 49))
                 screen.blit(combo_img_up, combo_rect)
                 combo_num_img = combofont.render(f"{Score.combo}", True, (24, 24, 24))
                 combo_num_img_up = combofontup.render(f"{Score.combo}", True, WHITE)
-                combo_rect = combo_num_img.get_rect(center=(self.lane_mid, (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2))
+                combo_rect = combo_num_img.get_rect(center=((WIDTH / 3) + 200, (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2))
                 screen.blit(combo_num_img, combo_rect)
-                combo_rect = combo_num_img.get_rect(center=(self.lane_mid, (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 - 4))
+                combo_rect = combo_num_img.get_rect(center=((WIDTH / 3) + 200, (HEIGHT - (HEIGHT - JUDGE_LINE)) / 2 - 4))
                 screen.blit(combo_num_img_up, combo_rect)
 
             if self.judge_text:
@@ -1363,7 +1411,7 @@ def gamerun(current_song, difficulty):
                     int(judge_img_up.get_width() * self.judge_scale),
                     int(judge_img_up.get_height() * self.judge_scale)
                 ))
-                judge_rect = judge_img.get_rect(center=(self.lane_mid, HEIGHT * 1 / 3))
+                judge_rect = judge_img.get_rect(center=((WIDTH / 3) + 200, HEIGHT * 1 / 3))
                 screen.blit(judge_img, judge_rect)
                 screen.blit(judge_img_up, judge_rect)
 
@@ -1377,16 +1425,16 @@ def gamerun(current_song, difficulty):
                 judge_img = combofont.render(self.judge_text, True, self.judge_color)
                 judge_img_up = combofontup.render(self.judge_text, True, self.judge_outline)
                 judge_img = pygame.transform.scale(judge_img, (int(judge_img.get_width() * self.judge_scale),
-                                                               int(judge_img.get_height() * self.judge_scale)))
+                    int(judge_img.get_height() * self.judge_scale)))
                 judge_img_up = pygame.transform.scale(judge_img_up, (int(judge_img_up.get_width() * self.judge_scale),
-                                                                     int(judge_img_up.get_height() * self.judge_scale)))
-                judge_rect = judge_img.get_rect(center=(self.lane_mid, HEIGHT * 1 / 3))
+                    int(judge_img_up.get_height() * self.judge_scale)))
+                judge_rect = judge_img.get_rect(center=((WIDTH / 3) + 200, HEIGHT * 1 / 3))
                 screen.blit(judge_img, judge_rect)
                 screen.blit(judge_img_up, judge_rect)
 
         def display_lanes(self):
-            pygame.draw.line(screen, pygame.Color('Green'), (LANE[1][0], JUDGE_LINE),
-                             ((LANE[5][0]), JUDGE_LINE), 5)
+            pygame.draw.line(screen, pygame.Color('Green'), ((WIDTH / 3),JUDGE_LINE),
+                             ((WIDTH / 3 + 400), JUDGE_LINE), 5)
             for i in range(0, 5):
                 pygame.draw.line(screen, WHITE, ((WIDTH / 3) + i * 100, 0),
                                  ((WIDTH / 3) + i * 100, HEIGHT), 5)
@@ -1410,200 +1458,6 @@ def gamerun(current_song, difficulty):
 
             if self.judge_debounce > 0:
                 self.judge_debounce -= 1
-
-    def result(song):
-        global Conductor, Music, PlayerInput, Beatline, Note, Hold, Swipe, Lane, Score, Interface
-        pygame.init()
-
-        BASE_WIDTH, BASE_HEIGHT = 1920, 1080
-
-        screen = pygame.display.set_mode((WIDTH, HEIGHT))
-        clock = pygame.time.Clock()
-
-        scale_x = WIDTH / BASE_WIDTH
-        scale_y = HEIGHT / BASE_HEIGHT
-        scale = min(scale_x, scale_y)
-        songsdict = dir.getsongdict()
-
-        # Fonts(Change later)
-        title_font = pygame.font.Font(os.path.join("fonts", "Platinum_over.ttf"), int(100 * scale))
-        score_font = pygame.font.Font(os.path.join("fonts", "Designer.otf"), int(55 * scale))
-        stat_font = pygame.font.Font(os.path.join("fonts", "Designer.otf"), int(30 * scale))
-        grade_font = pygame.font.Font(os.path.join("fonts", "Platinum_over.ttf"), int(400 * scale))
-        grade_font_under = pygame.font.Font(os.path.join("fonts", "Platinum_under.ttf"), int(400 * scale))
-
-        # Background = using songname.png
-        bg_image_path = songsdict[song]['Bg']
-        bg_image = pygame.image.load(bg_image_path).convert()
-        bg_image = pygame.transform.scale(bg_image, (WIDTH, HEIGHT))
-        bg_opacity = 20
-        overlay_opacity = 100
-
-        difficulty = Score.difficulty
-        song_name = songsdict[song]['name'].upper()
-        accuracy = Score.accuracy
-        gradeciteria = {100: 'SSS+', 95: 'SSS', 90: 'SS', 85: 'S', 80: 'A', 60: 'B', 40: 'C', 30: 'D', 10: 'F',
-                        0: 'BRUH'}
-        for acc, grade in gradeciteria.items():
-            if Score.accuracy >= accuracy:
-                grade = grade
-                break
-        print(grade)
-        score = Score.score
-        max_combo = Score.maxcombo
-        marvelous = Score.acc['MARVELOUS']
-        perfect = Score.acc['PERFECT']
-        great = Score.acc['GREAT']
-        good = Score.acc['GOOD']
-        miss = Score.acc['MISS']
-
-        # Rectangle
-        def draw_rounded_rect(surface, color, rect, radius):
-            pygame.draw.rect(surface, color, rect, border_radius=int(radius * scale))
-
-        # Trapezoid
-        def draw_right_trapezoid(surface, color, x, y, w, h, slant):
-            p1 = (x, y)
-            p2 = (x + w, y)
-            p3 = (x + w - slant, y + h)
-            p4 = (x, y + h)
-            pygame.draw.polygon(surface, color, [p1, p2, p3, p4])
-
-        # adjusting number
-        panel_width = int(700 * scale)
-        panel_height = int(400 * scale)
-        panel_x = int(100 * scale)
-        panel_y = int(300 * scale)
-
-        trapezoid_width = int(600 * scale)
-        trapezoid_height = int(120 * scale)
-        trapezoid_slant = int(-100 * scale)
-        trapezoid_x = int(100 * scale)
-        trapezoid_y = int(150 * scale)
-
-        stats_top_margin = int(120 * scale)
-        stats_spacing = int(60 * scale)
-
-        score_offset_x = int(-305 * scale)
-        score_offset_y = int(0 * scale)
-
-        song_name_x = int(panel_x + 850 * scale)
-        song_name_y = int(panel_y - 168 * scale)
-
-        accuracy_x = int(panel_x + 45 * scale)
-        accuracy_y = int(panel_y + 500 * scale)
-
-        grade_x = int(panel_x + 950 * scale)
-        grade_y = int(panel_y - 50 * scale)
-
-        button_width = int(200 * scale)
-        button_height = int(80 * scale)
-        button_spacing = int(30 * scale)
-
-        button_continue_x = int(WIDTH - button_width - 50 * scale)
-        button_continue_y = int(HEIGHT - button_height - 50 * scale)
-
-        button_retry_x = int(WIDTH - button_width - 280 * scale)
-        button_retry_y = int(HEIGHT - button_height - 50 * scale)
-
-        diff_hori_freaking_margin = int(20 * scale)
-        diff_vert_padding = int(8 * scale)
-
-        #####################################################
-        continue_rect = pygame.Rect(button_continue_x, button_continue_y, button_width, button_height)
-        retry_rect = pygame.Rect(button_retry_x, button_retry_y, button_width, button_height)
-
-        while True:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    mouse_pos = pygame.mouse.get_pos()
-                    if continue_rect.collidepoint(mouse_pos):
-                        menu.song_selection_screen()
-                        print("Go back to song selection yessir")
-                    elif retry_rect.collidepoint(mouse_pos):
-                        gamerun(songsdict[song]['name'], diff)
-                        print("you sucked so u retry it or you just want better score")
-
-            bg_surface = bg_image.copy()
-            bg_surface.set_alpha(bg_opacity)
-            screen.blit(bg_surface, (0, 0))
-
-            # difficulty
-            difficulty_render = stat_font.render(difficulty, True, WHITE)
-            difficulty_text_rect = difficulty_render.get_rect()
-            diff_rect_width = panel_width - (diff_hori_freaking_margin * 2)
-            diff_rect_height = difficulty_text_rect.height + diff_vert_padding * 2
-            diff_x = panel_x + diff_hori_freaking_margin
-            diff_y = panel_y + panel_height - diff_rect_height - diff_vert_padding
-
-            difficulty_rect_approx = pygame.Rect(diff_x, diff_y, diff_rect_width, diff_rect_height)
-
-            # bhind overlay
-            overlay_surface = pygame.Surface((WIDTH, HEIGHT))
-            overlay_surface.set_alpha(overlay_opacity)
-            overlay_surface.fill(BLACK)
-            screen.blit(overlay_surface, (0, 0))
-
-            draw_rounded_rect(screen, WHITE, pygame.Rect(panel_x, panel_y, panel_width, panel_height), 30)
-            draw_right_trapezoid(screen, WHITE, trapezoid_x, trapezoid_y, trapezoid_width, trapezoid_height,
-                                 trapezoid_slant)
-            draw_rounded_rect(screen, diffcolor[Score.difficulty], difficulty_rect_approx, 15)  # color change here
-
-            text_blit_x = difficulty_rect_approx.x + diff_hori_freaking_margin  # difficulty one
-            text_blit_y = difficulty_rect_approx.y + diff_vert_padding
-
-            score_text = score_font.render(f"Score: {score}", True,
-                                           BLACK)  # ts pmo it hella hard :pray: pls no more trapezoid
-            text_rect = score_text.get_rect(midleft=(
-                trapezoid_x + trapezoid_width / 2 - trapezoid_slant / 2 + score_offset_x,
-                trapezoid_y + trapezoid_height / 2 + score_offset_y
-            ))
-            screen.blit(score_text, text_rect)
-
-            stats = [("Marvelous", marvelous), ("Perfect", perfect), ("Great", great), ("Good", good), ("Miss", miss)]
-            label_x = panel_x + int(42 * scale)
-            value_x = panel_x + int(275 * scale)
-            for i, (label, value) in enumerate(stats):
-                y = panel_y - int(65 * scale) + stats_top_margin + i * stats_spacing
-                screen.blit(stat_font.render(f"{label}", True, BLACK),
-                            (label_x, y))  # stat(changing perfect, great, miss)
-                screen.blit(stat_font.render(str(value), True, BLACK), (value_x, y))  # stat(changing number)
-
-            # max combo
-            max_label_text = stat_font.render("Max Combo", True, BLACK)
-            label_rect = max_label_text.get_rect(
-                topright=(panel_x + panel_width - int(50 * scale), panel_y + int(57 * scale)))
-            screen.blit(max_label_text, label_rect)
-
-            max_value_text = stat_font.render(str(max_combo), True, BLACK)
-            value_rect = max_value_text.get_rect(
-                topright=(panel_x + panel_width - int(50 * scale), label_rect.bottom + int(10 * scale)))
-            screen.blit(max_value_text, value_rect)
-
-            # song + difficulty + acc
-            screen.blit(title_font.render(song_name, True, BLACK), (song_name_x, song_name_y))
-            screen.blit(title_font.render(song_name, True, WHITE), (song_name_x, song_name_y))
-            screen.blit(stat_font.render(f"Accuracy: {accuracy}%", True, WHITE), (accuracy_x, accuracy_y))
-            screen.blit(difficulty_render, (text_blit_x, text_blit_y))
-
-            grade_text_under = grade_font.render(grade, True, BLACK)
-            grade_text_over = grade_font.render(grade, True, WHITE)
-            screen.blit(grade_text_under, (grade_x + int(20 * scale), grade_y))
-            screen.blit(grade_text_over, (grade_x, grade_y))
-
-            pygame.draw.rect(screen, WHITE, continue_rect, border_radius=int(20 * scale))
-            pygame.draw.rect(screen, WHITE, retry_rect, border_radius=int(20 * scale))
-            continue_text_surf = stat_font.render("Continue", True, BLACK)
-            retry_text_surf = stat_font.render("Retry", True, BLACK)
-            screen.blit(continue_text_surf, continue_text_surf.get_rect(center=continue_rect.center))
-            screen.blit(retry_text_surf, retry_text_surf.get_rect(center=retry_rect.center))
-
-            pygame.display.update()
-            clock.tick(60)
 
     running = True
     notes = []
@@ -1640,25 +1494,49 @@ def gamerun(current_song, difficulty):
                     Score.notecount += 1
 
     print('Start game')
+    global LANE, JUDGE_LINE
+    JUDGE_LINE = HEIGHT - 100
+    LANE = {
+        1: ((WIDTH / 3), 0),
+        2: ((WIDTH / 3) + 100, 0),
+        3: ((WIDTH / 3) + 200, 0),
+        4: ((WIDTH / 3) + 300, 0),
+        5: ((WIDTH / 3) + 400, 0)
+    }
+    beatline.updatelane()
+    for note in notes:
+        note.update()
     pygame.key.set_repeat(0, 0)
     Music.play()
     isPaused = False
-    start_time = time.time()
-    previous_time = time.time()
     while running:
         clock.tick_busy_loop(fps)
         if swipe_cd > 0: swipe_cd -= 1
         screen.fill((30, 30, 30))
-        for j in range(20):
-            for i in range(-12, 12):
+        for j in range(30):
+            for i in range(-20, 20):
                 surf = pygame.Surface((abs(20 - j), abs(20 - j))).convert_alpha()
-                surf.fill(pygame.Color("white"))
-                screen.blit(surf, (WIDTH / 2 + i * 40, HEIGHT + 100 - j * 45))
+                surf.fill(WHITE)
+                if -WIDTH < i * 40 < WIDTH:
+                    screen.blit(surf, (WIDTH / 2 + i * 40, HEIGHT + 100 - j * 45))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                running = False
                 pygame.quit()
                 exit()
+            if event.type == pygame.VIDEORESIZE:
+                JUDGE_LINE = HEIGHT - 100
+                LANE = {
+                    1: ((WIDTH / 3), 0),
+                    2: ((WIDTH / 3) + 100, 0),
+                    3: ((WIDTH / 3) + 200, 0),
+                    4: ((WIDTH / 3) + 300, 0),
+                    5: ((WIDTH / 3) + 400, 0)
+                }
+                beatline.updatelane()
+                for note in notes:
+                    note.update()
             Input.handle_event(event)
 
         Interface.display_UI()
@@ -1671,7 +1549,6 @@ def gamerun(current_song, difficulty):
                 note.main()
 
         Interface.update_score_animation()
-
         Interface.display_lanes()
         Interface.display_info()
 
@@ -1681,9 +1558,197 @@ def gamerun(current_song, difficulty):
 
         if pygame.mixer.music.get_pos() == -1:
             Score.calculateacc()
-            result(current_song)
+            difficulty,score,maxcombo,accuracy,acc = Score.senddata()
+            result(current_song,difficulty,score,maxcombo,accuracy,acc)
 
         pygame.display.update()
+
+def result(song,difficulty,score,maxcombo,accuracy,acc):
+    pygame.init()
+
+    BASE_WIDTH, BASE_HEIGHT = 1920, 1080
+
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    clock = pygame.time.Clock()
+
+    scale_x = WIDTH / BASE_WIDTH
+    scale_y = HEIGHT / BASE_HEIGHT
+    scale = min(scale_x, scale_y)
+    songsdict = dir.getsongdict()
+
+    # Fonts(Change later)
+    title_font = pygame.font.Font(os.path.join("fonts", "Platinum_over.ttf"), int(100 * scale))
+    score_font = pygame.font.Font(os.path.join("fonts", "Designer.otf"), int(55 * scale))
+    stat_font = pygame.font.Font(os.path.join("fonts", "Designer.otf"), int(30 * scale))
+    grade_font = pygame.font.Font(os.path.join("fonts", "Platinum_over.ttf"), int(400 * scale))
+    grade_font_under = pygame.font.Font(os.path.join("fonts", "Platinum_under.ttf"), int(400 * scale))
+
+    # Background = using songname.png
+    bg_image_path = songsdict[song]['Bg']
+    bg_image = pygame.image.load(bg_image_path).convert()
+    bg_image = pygame.transform.scale(bg_image, (WIDTH, HEIGHT))
+    bg_opacity = 20
+    overlay_opacity = 100
+
+    song_name = songsdict[song]['name'].upper()
+    gradeciteria = {100: 'SSS+', 95: 'SSS', 90: 'SS', 85: 'S', 80: 'A', 60: 'B', 40: 'C', 30: 'D', 10: 'F',
+                    0: 'BRUH'}
+    for accu, grade in gradeciteria.items():
+        if accuracy >= accu:
+            grade = grade
+            break
+    print(grade)
+    marvelous = acc['MARVELOUS']
+    perfect = acc['PERFECT']
+    great = acc['GREAT']
+    good = acc['GOOD']
+    miss = acc['MISS']
+
+    # Rectangle
+    def draw_rounded_rect(surface, color, rect, radius):
+        pygame.draw.rect(surface, color, rect, border_radius=int(radius * scale))
+
+    # Trapezoid
+    def draw_right_trapezoid(surface, color, x, y, w, h, slant):
+        p1 = (x, y)
+        p2 = (x + w, y)
+        p3 = (x + w - slant, y + h)
+        p4 = (x, y + h)
+        pygame.draw.polygon(surface, color, [p1, p2, p3, p4])
+
+    # adjusting number
+    panel_width = int(700 * scale)
+    panel_height = int(400 * scale)
+    panel_x = int(100 * scale)
+    panel_y = int(300 * scale)
+
+    trapezoid_width = int(600 * scale)
+    trapezoid_height = int(120 * scale)
+    trapezoid_slant = int(-100 * scale)
+    trapezoid_x = int(100 * scale)
+    trapezoid_y = int(150 * scale)
+
+    stats_top_margin = int(120 * scale)
+    stats_spacing = int(60 * scale)
+
+    score_offset_x = int(-305 * scale)
+    score_offset_y = int(0 * scale)
+
+    song_name_x = int(panel_x + 850 * scale)
+    song_name_y = int(panel_y - 168 * scale)
+
+    accuracy_x = int(panel_x + 45 * scale)
+    accuracy_y = int(panel_y + 500 * scale)
+
+    grade_x = int(panel_x + 950 * scale)
+    grade_y = int(panel_y - 50 * scale)
+
+    button_width = int(200 * scale)
+    button_height = int(80 * scale)
+    button_spacing = int(30 * scale)
+
+    button_continue_x = int(WIDTH - button_width - 50 * scale)
+    button_continue_y = int(HEIGHT - button_height - 50 * scale)
+
+    button_retry_x = int(WIDTH - button_width - 280 * scale)
+    button_retry_y = int(HEIGHT - button_height - 50 * scale)
+
+    diff_hori_freaking_margin = int(20 * scale)
+    diff_vert_padding = int(8 * scale)
+
+    #####################################################
+    continue_rect = pygame.Rect(button_continue_x, button_continue_y, button_width, button_height)
+    retry_rect = pygame.Rect(button_retry_x, button_retry_y, button_width, button_height)
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                mouse_pos = pygame.mouse.get_pos()
+                if continue_rect.collidepoint(mouse_pos):
+                    song_selection_screen()
+                elif retry_rect.collidepoint(mouse_pos):
+                    gamerun(songsdict[song]['name'], difficulty)
+
+        bg_surface = bg_image.copy()
+        bg_surface.set_alpha(bg_opacity)
+        screen.blit(bg_surface, (0, 0))
+
+        # difficulty
+        difficulty_render = stat_font.render(difficulty, True, WHITE)
+        difficulty_text_rect = difficulty_render.get_rect()
+        diff_rect_width = panel_width - (diff_hori_freaking_margin * 2)
+        diff_rect_height = difficulty_text_rect.height + diff_vert_padding * 2
+        diff_x = panel_x + diff_hori_freaking_margin
+        diff_y = panel_y + panel_height - diff_rect_height - diff_vert_padding
+
+        difficulty_rect_approx = pygame.Rect(diff_x, diff_y, diff_rect_width, diff_rect_height)
+
+        # bhind overlay
+        overlay_surface = pygame.Surface((WIDTH, HEIGHT))
+        overlay_surface.set_alpha(overlay_opacity)
+        overlay_surface.fill(BLACK)
+        screen.blit(overlay_surface, (0, 0))
+
+        draw_rounded_rect(screen, WHITE, pygame.Rect(panel_x, panel_y, panel_width, panel_height), 30)
+        draw_right_trapezoid(screen, WHITE, trapezoid_x, trapezoid_y, trapezoid_width, trapezoid_height,
+                             trapezoid_slant)
+        draw_rounded_rect(screen, diffcolor[difficulty], difficulty_rect_approx, 15)  # color change here
+
+        text_blit_x = difficulty_rect_approx.x + diff_hori_freaking_margin  # difficulty one
+        text_blit_y = difficulty_rect_approx.y + diff_vert_padding
+
+        score_text = score_font.render(f"Score: {score}", True,
+                                       BLACK)  # ts pmo it hella hard :pray: pls no more trapezoid
+        text_rect = score_text.get_rect(midleft=(
+            trapezoid_x + trapezoid_width / 2 - trapezoid_slant / 2 + score_offset_x,
+            trapezoid_y + trapezoid_height / 2 + score_offset_y
+        ))
+        screen.blit(score_text, text_rect)
+
+        stats = [("Marvelous", marvelous), ("Perfect", perfect), ("Great", great), ("Good", good), ("Miss", miss)]
+        label_x = panel_x + int(42 * scale)
+        value_x = panel_x + int(275 * scale)
+        for i, (label, value) in enumerate(stats):
+            y = panel_y - int(65 * scale) + stats_top_margin + i * stats_spacing
+            screen.blit(stat_font.render(f"{label}", True, BLACK),
+                        (label_x, y))  # stat(changing perfect, great, miss)
+            screen.blit(stat_font.render(str(value), True, BLACK), (value_x, y))  # stat(changing number)
+
+        # max combo
+        max_label_text = stat_font.render("Max Combo", True, BLACK)
+        label_rect = max_label_text.get_rect(
+            topright=(panel_x + panel_width - int(50 * scale), panel_y + int(57 * scale)))
+        screen.blit(max_label_text, label_rect)
+
+        max_value_text = stat_font.render(str(maxcombo), True, BLACK)
+        value_rect = max_value_text.get_rect(
+            topright=(panel_x + panel_width - int(50 * scale), label_rect.bottom + int(10 * scale)))
+        screen.blit(max_value_text, value_rect)
+
+        # song + difficulty + acc
+        screen.blit(title_font.render(song_name, True, BLACK), (song_name_x, song_name_y))
+        screen.blit(title_font.render(song_name, True, WHITE), (song_name_x, song_name_y))
+        screen.blit(stat_font.render(f"Accuracy: {accuracy}%", True, WHITE), (accuracy_x, accuracy_y))
+        screen.blit(difficulty_render, (text_blit_x, text_blit_y))
+
+        grade_text_under = grade_font.render(grade, True, BLACK)
+        grade_text_over = grade_font.render(grade, True, WHITE)
+        screen.blit(grade_text_under, (grade_x + int(20 * scale), grade_y))
+        screen.blit(grade_text_over, (grade_x, grade_y))
+
+        pygame.draw.rect(screen, WHITE, continue_rect, border_radius=int(20 * scale))
+        pygame.draw.rect(screen, WHITE, retry_rect, border_radius=int(20 * scale))
+        continue_text_surf = stat_font.render("Continue", True, BLACK)
+        retry_text_surf = stat_font.render("Retry", True, BLACK)
+        screen.blit(continue_text_surf, continue_text_surf.get_rect(center=continue_rect.center))
+        screen.blit(retry_text_surf, retry_text_surf.get_rect(center=retry_rect.center))
+
+        pygame.display.update()
+        clock.tick(60)
 
 
 running = True
