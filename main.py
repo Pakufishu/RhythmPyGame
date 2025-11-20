@@ -609,7 +609,7 @@ def song_selection_screen():
                     (WIDTH//2 + 220 + x*2, 0 + y), (WIDTH//2 + 170 + x, 80 + y), (WIDTH//2 + 220 + x*2, 80 + y)))
 
                 pygame.draw.polygon(screen, WHITE, ((WIDTH, 0 + y),
-                    (WIDTH//2 + 300 + x, 0 + y), (WIDTH//2 + 300, 80 + y), (WIDTH, 80 + y)))
+                    (WIDTH//2 + 330 + x, 0 + y), (WIDTH//2 + 280, 80 + y), (WIDTH, 80 + y)))
                 pygame.draw.polygon(screen, WHITE, ((WIDTH//2 + 300, 0 + y),
                     (WIDTH, 0 + y), (WIDTH//2 + 170, 80 + y), (WIDTH, 80 + y)))
                 pygame.draw.polygon(screen, pygame.Color('Gray'), ((WIDTH, 80 + y),
