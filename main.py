@@ -324,7 +324,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # folder where menu.py is
 # Setting
 def settings_scene():
     import variables
-    global WIDTH, HEIGHT, screen, hover_sound, running, song_volume, sfx_volume
+    global WIDTH, HEIGHT, screen, hover_sound, running, song_volume, sfx_volume, speed
 
     snapshot = screen.copy()
     blurred = func.blur_surface(snapshot, passes=3, scale_factor=0.25)
@@ -382,7 +382,8 @@ def settings_scene():
         func.draw_double_text(panel, "SPEED", label_font, label_font, TEXT_COLOR, BLACK, (label_x, 320), center=False)
 
         # Update ishowspeed variable
-        variables.speed = speed_input.get_value()
+        global speed
+        speed = speed_input.get_value()
 
         # Draw sliders on panel
         music_slider.draw(panel)
@@ -811,6 +812,8 @@ def main_menu():
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 running = False
+                pygame.quit()
+                sys.exit()
             elif e.type == pygame.VIDEORESIZE:
                 WIDTH, HEIGHT = e.w, e.h
                 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
@@ -1017,6 +1020,7 @@ def gamerun(current_song, difficulty):
             self.draw()
             if self.y > HEIGHT + speed * 10:
                 self.kys()
+                Score.acc['MISS'] += 1
                 judges.append('MISS')
 
         def scroll(self):
@@ -1025,7 +1029,7 @@ def gamerun(current_song, difficulty):
         def draw(self):
             if HEIGHT > self.y > 0:
                 pygame.draw.line(screen, pygame.Color('Yellow'), (self.lanestart, self.y),
-                                 (self.laneend, self.y), 30)
+                                 (self.laneend, self.y), 45)
 
         def update(self):
             self.lanestart = LANE[self.lane][0]
@@ -1092,6 +1096,7 @@ def gamerun(current_song, difficulty):
             self.draw()
             if self.end > HEIGHT + speed * 10:
                 self.kys()
+                Score.acc['MISS'] += 1
                 judges.append('MISS')
 
         def scroll(self):
@@ -1207,6 +1212,7 @@ def gamerun(current_song, difficulty):
             self.draw()
             if self.y > HEIGHT + speed * 10:
                 self.kys()
+                Score.acc['MISS'] += 1
                 judges.append('MISS')
 
         def scroll(self):
