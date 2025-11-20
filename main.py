@@ -525,7 +525,7 @@ def credits_scene():
 def song_selection_screen():
     global WIDTH, HEIGHT, screen, running
     scroll_offset = 0
-    scroll_vel = 400 * random.random()
+    scroll_vel = 200 * random.random()
     cover_rotation = 0
     item_height = 200
     ishovered = False
@@ -600,28 +600,29 @@ def song_selection_screen():
                 song = items[list_index]
                 img = pygame.image.load(songsdict[song]['Art']).convert_alpha()
                 selectart = pygame.transform.scale(img, (105, 105))
-                selectart_rect = selectart.get_rect(topleft=(WIDTH - 325 + x, 0 + y))
+                selectart_rect = selectart.get_rect(topleft=(WIDTH//2 + 225 + x, 0 + y))
                 screen.blit(selectart, selectart_rect)
 
-                pygame.draw.polygon(screen, diff_color, ((WIDTH - 300 + x, 0 + y),
-                    (WIDTH - 400 + x, 0 + y), (WIDTH - 450 + x, 80 + y), (WIDTH - 350 + x, 80 + y)))
-                pygame.draw.polygon(screen, diff_color, ((WIDTH - 400 + x, 0 + y),
-                    (WIDTH - 300 + x*2, 0 + y), (WIDTH - 350 + x, 80 + y), (WIDTH - 250 + x*2, 80 + y)))
+                pygame.draw.polygon(screen, diff_color, ((WIDTH//2 + 220 + x, 0 + y),
+                    (WIDTH//2 + 120 + x, 0 + y), (WIDTH//2 + 70 + x, 80 + y), (WIDTH//2 + 170 + x, 80 + y)))
+                pygame.draw.polygon(screen, diff_color, ((WIDTH//2 + 100 + x, 0 + y),
+                    (WIDTH//2 + 220 + x*2, 0 + y), (WIDTH//2 + 170 + x, 80 + y), (WIDTH//2 + 220 + x*2, 80 + y)))
+
                 pygame.draw.polygon(screen, WHITE, ((WIDTH, 0 + y),
-                    (WIDTH - 220 + x, 0 + y), (WIDTH - 270, 80 + y), (WIDTH, 80 + y)))
-                pygame.draw.polygon(screen, WHITE, ((WIDTH - 300, 0 + y),
-                    (WIDTH - 220 + x, 0 + y), (WIDTH - 270, 80 + y), (WIDTH, 80 + y)))
+                    (WIDTH//2 + 300 + x, 0 + y), (WIDTH//2 + 300, 80 + y), (WIDTH, 80 + y)))
+                pygame.draw.polygon(screen, WHITE, ((WIDTH//2 + 300, 0 + y),
+                    (WIDTH, 0 + y), (WIDTH//2 + 170, 80 + y), (WIDTH, 80 + y)))
                 pygame.draw.polygon(screen, pygame.Color('Gray'), ((WIDTH, 80 + y),
-                    (WIDTH - 450 + x, 80 + y), (WIDTH - 270 + x, 120 + y), (WIDTH, 120 + y)))
+                    (WIDTH//2 + 70 + x, 80 + y), (WIDTH//2 + 120 + x, 120 + y), (WIDTH, 120 + y)))
 
                 song_text = font_text.render(songsdict[song]['name'], True, BLACK)
-                song_rect = song_text.get_rect(midleft=(WIDTH - 200 + x, 60 + y))
+                song_rect = song_text.get_rect(midleft=(WIDTH//2 + 400 + x, 60 + y))
                 screen.blit(song_text, song_rect)
                 diffnum = settings['Difficulty'][current_diff]
                 if settings['Difficulty'][current_diff] == 0:
                     diffnum = '-'
                 diff_text = font_text_big.render(str(diffnum), True, WHITE)
-                diff_rect = diff_text.get_rect(center=(WIDTH - 380 + x, 40 + y))
+                diff_rect = diff_text.get_rect(center=(WIDTH//2 + 140 + x, 40 + y))
                 screen.blit(diff_text, diff_rect)
 
         with open(songsdict[song_player.song]['settings'], 'r') as f:
@@ -634,6 +635,7 @@ def song_selection_screen():
         cover_rect = cover_art.get_rect(center=(WIDTH // 3, HEIGHT * 3 // 7))
         pygame.draw.rect(screen, diff_color, cover_rect.inflate(-40, -40))
         screen.blit(cover_art, cover_rect)
+
         func.draw_trapezoid(screen, pygame.Color(BG_COLOR2), 0, HEIGHT - 160, WIDTH // 2, 40, -30)
         func.draw_trapezoid(screen, pygame.Color(BG_COLOR2), 0, HEIGHT - 120, WIDTH // 2 + 30, 40, 30)
 
